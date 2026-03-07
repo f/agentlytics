@@ -636,6 +636,171 @@ async function resetAndRescanAsync(onProgress) {
   return scanAllAsync(onProgress);
 }
 
+function getCachedDashboardStats(opts = {}) {
+  const editorFilter = opts.editor || null;
+  const where = editorFilter ? ' WHERE source = ?' : '';
+  const whereAnd = editorFilter ? ' AND source = ?' : '';
+  const params = editorFilter ? [editorFilter] : [];
+
+  // ── Hourly distribution (aggregate across all days) ──
+  const hourlyRows = db.prepare(`
+    SELECT
+      CAST(strftime('%H', datetime(COALESCE(last_updated_at, created_at)/1000, 'unixepoch', 'localtime')) AS INTEGER) as hour,
+      COUNT(*) as count
+    FROM chats
+    WHERE (last_updated_at IS NOT NULL OR created_at IS NOT NULL)${whereAnd}
+    GROUP BY hour ORDER BY hour
+  `).all(...params);
+  const hourly = new Array(24).fill(0);
+  for (const r of hourlyRows) hourly[r.hour] = r.count;
+
+  // ── Weekday distribution ──
+  const weekdayRows = db.prepare(`
+    SELECT
+      CAST(strftime('%w', datetime(COALESCE(last_updated_at, created_at)/1000, 'unixepoch', 'localtime')) AS INTEGER) as dow,
+      COUNT(*) as count
+    FROM chats
+    WHERE (last_updated_at IS NOT NULL OR created_at IS NOT NULL)${whereAnd}
+    GROUP BY dow ORDER BY dow
+  `).all(...params);
+  const weekdays = new Array(7).fill(0);
+  for (const r of weekdayRows) weekdays[r.dow] = r.count;
+
+  // ── Session depth distribution (messages per session) ──
+  const depthRows = db.prepare(`
+    SELECT cs.total_messages as msgs FROM chat_stats cs
+    JOIN chats c ON cs.chat_id = c.id WHERE cs.total_messages > 0${whereAnd}
+  `).all(...params);
+  const depthBuckets = { '1': 0, '2-5': 0, '6-10': 0, '11-20': 0, '21-50': 0, '51-100': 0, '100+': 0 };
+  for (const r of depthRows) {
+    const m = r.msgs;
+    if (m <= 1) depthBuckets['1']++;
+    else if (m <= 5) depthBuckets['2-5']++;
+    else if (m <= 10) depthBuckets['6-10']++;
+    else if (m <= 20) depthBuckets['11-20']++;
+    else if (m <= 50) depthBuckets['21-50']++;
+    else if (m <= 100) depthBuckets['51-100']++;
+    else depthBuckets['100+']++;
+  }
+
+  // ── Token economy ──
+  const tokenRow = db.prepare(`
+    SELECT
+      COALESCE(SUM(cs.total_input_tokens), 0) as input,
+      COALESCE(SUM(cs.total_output_tokens), 0) as output,
+      COALESCE(SUM(cs.total_cache_read), 0) as cacheRead,
+      COALESCE(SUM(cs.total_cache_write), 0) as cacheWrite,
+      COALESCE(SUM(cs.total_user_chars), 0) as userChars,
+      COALESCE(SUM(cs.total_assistant_chars), 0) as assistantChars,
+      COUNT(*) as sessions
+    FROM chat_stats cs JOIN chats c ON cs.chat_id = c.id WHERE 1=1${whereAnd}
+  `).get(...params);
+
+  // ── Coding streaks ──
+  const streakRows = db.prepare(`
+    SELECT DISTINCT date(COALESCE(last_updated_at, created_at)/1000, 'unixepoch', 'localtime') as day
+    FROM chats WHERE (last_updated_at IS NOT NULL OR created_at IS NOT NULL)${whereAnd}
+    ORDER BY day
+  `).all(...params);
+  let currentStreak = 0, longestStreak = 0, tempStreak = 1;
+  const today = new Date().toISOString().split('T')[0];
+  for (let i = 1; i < streakRows.length; i++) {
+    const prev = new Date(streakRows[i - 1].day);
+    const curr = new Date(streakRows[i].day);
+    const diff = (curr - prev) / 86400000;
+    if (diff === 1) { tempStreak++; }
+    else { if (tempStreak > longestStreak) longestStreak = tempStreak; tempStreak = 1; }
+  }
+  if (tempStreak > longestStreak) longestStreak = tempStreak;
+  // Current streak: count backwards from today
+  if (streakRows.length > 0) {
+    const last = streakRows[streakRows.length - 1].day;
+    const lastDate = new Date(last);
+    const todayDate = new Date(today);
+    const daysDiff = (todayDate - lastDate) / 86400000;
+    if (daysDiff <= 1) {
+      currentStreak = 1;
+      for (let i = streakRows.length - 2; i >= 0; i--) {
+        const prev = new Date(streakRows[i].day);
+        const curr = new Date(streakRows[i + 1].day);
+        if ((curr - prev) / 86400000 === 1) currentStreak++;
+        else break;
+      }
+    }
+  }
+
+  // ── Monthly trend by editor ──
+  const monthEditorRows = db.prepare(`
+    SELECT
+      substr(date(COALESCE(last_updated_at, created_at)/1000, 'unixepoch'), 1, 7) as month,
+      source,
+      COUNT(*) as count
+    FROM chats
+    WHERE (last_updated_at IS NOT NULL OR created_at IS NOT NULL)${whereAnd}
+    GROUP BY month, source ORDER BY month
+  `).all(...params);
+  const monthEditors = {};
+  const allSources = new Set();
+  for (const r of monthEditorRows) {
+    if (!monthEditors[r.month]) monthEditors[r.month] = {};
+    monthEditors[r.month][r.source] = r.count;
+    allSources.add(r.source);
+  }
+
+  // ── Monthly velocity (avg messages per session per month) ──
+  const velocityRows = db.prepare(`
+    SELECT
+      substr(date(c.last_updated_at/1000, 'unixepoch'), 1, 7) as month,
+      AVG(cs.total_messages) as avgMsgs,
+      AVG(cs.total_input_tokens + cs.total_output_tokens) as avgTokens
+    FROM chat_stats cs JOIN chats c ON cs.chat_id = c.id
+    WHERE c.last_updated_at IS NOT NULL${whereAnd}
+    GROUP BY month ORDER BY month
+  `).all(...params);
+
+  // ── Top models ──
+  const modelRows = db.prepare(`
+    SELECT cs.models FROM chat_stats cs JOIN chats c ON cs.chat_id = c.id WHERE 1=1${whereAnd}
+  `).all(...params);
+  const modelFreq = {};
+  for (const r of modelRows) {
+    try { for (const m of JSON.parse(r.models)) modelFreq[m] = (modelFreq[m] || 0) + 1; } catch {}
+  }
+  const topModels = Object.entries(modelFreq).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  // ── Top tools ──
+  const toolRows = db.prepare(`
+    SELECT cs.tool_calls FROM chat_stats cs JOIN chats c ON cs.chat_id = c.id WHERE 1=1${whereAnd}
+  `).all(...params);
+  const toolFreq = {};
+  let totalToolCalls = 0;
+  for (const r of toolRows) {
+    try { for (const t of JSON.parse(r.tool_calls)) { toolFreq[t] = (toolFreq[t] || 0) + 1; totalToolCalls++; } } catch {}
+  }
+  const topTools = Object.entries(toolFreq).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  return {
+    hourly,
+    weekdays,
+    depthBuckets,
+    tokens: {
+      input: tokenRow.input,
+      output: tokenRow.output,
+      cacheRead: tokenRow.cacheRead,
+      cacheWrite: tokenRow.cacheWrite,
+      userChars: tokenRow.userChars,
+      assistantChars: tokenRow.assistantChars,
+      sessions: tokenRow.sessions,
+    },
+    streaks: { current: currentStreak, longest: longestStreak, totalDays: streakRows.length },
+    monthlyTrend: { months: Object.keys(monthEditors).sort(), sources: [...allSources], data: monthEditors },
+    velocity: velocityRows.map(r => ({ month: r.month, avgMsgs: Math.round(r.avgMsgs * 10) / 10, avgTokens: Math.round(r.avgTokens) })),
+    topModels: topModels.map(([name, count]) => ({ name, count })),
+    topTools: topTools.map(([name, count]) => ({ name, count })),
+    totalToolCalls,
+  };
+}
+
 function getDb() { return db; }
 
 module.exports = {
