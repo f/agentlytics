@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, X, Flame, Zap, MessageSquare, Wrench } from 'lucide-react'
+import { ArrowRight, X, Flame, Zap, MessageSquare, Wrench, Share2 } from 'lucide-react'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Filler } from 'chart.js'
 import { Doughnut, Bar, Line } from 'react-chartjs-2'
 import KpiCard from '../components/KpiCard'
 import ActivityHeatmap from '../components/ActivityHeatmap'
 import DateRangePicker from '../components/DateRangePicker'
-import { fetchDailyActivity, fetchOverview as fetchOverviewApi, fetchDashboardStats } from '../lib/api'
 import { editorColor, editorLabel, formatNumber, dateRangeToApiParams } from '../lib/constants'
+import { fetchDailyActivity, fetchOverview as fetchOverviewApi, fetchDashboardStats, fetchShareImage } from '../lib/api'
 import { useTheme } from '../lib/theme'
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Filler)
@@ -32,6 +32,7 @@ export default function Dashboard({ overview }) {
   const [selectedEditor, setSelectedEditor] = useState(null)
   const [dateRange, setDateRange] = useState(null)
   const { dark } = useTheme()
+  const [sharing, setSharing] = useState(false)
   const txtColor = dark ? '#888' : '#555'
   const txtDim = dark ? '#555' : '#999'
   const gridColor = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'
@@ -155,8 +156,70 @@ export default function Dashboard({ overview }) {
     return s + v * midpoints[i]
   }, 0) / tk.sessions).toFixed(1) : '—') : '—'
 
+  const handleShare = async () => {
+    setSharing(true)
+    try {
+      const svg = await fetchShareImage()
+      if (!svg || svg.startsWith('{')) throw new Error('Failed to fetch image')
+
+      // Try PNG conversion via canvas, fallback to SVG download
+      let downloaded = false
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = 1600
+        canvas.height = 880
+        const ctx = canvas.getContext('2d')
+        const img = new Image()
+        const svgB64 = btoa(unescape(encodeURIComponent(svg)))
+        const dataUrl = `data:image/svg+xml;base64,${svgB64}`
+        await new Promise((resolve, reject) => {
+          img.onload = resolve
+          img.onerror = reject
+          img.src = dataUrl
+        })
+        ctx.drawImage(img, 0, 0, 1600, 880)
+        const pngUrl = canvas.toDataURL('image/png')
+        const a = document.createElement('a')
+        a.href = pngUrl
+        a.download = 'agentlytics.png'
+        a.click()
+        downloaded = true
+      } catch {
+        // Fallback: download SVG directly
+        const blob = new Blob([svg], { type: 'image/svg+xml' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = 'agentlytics.svg'
+        a.click()
+        URL.revokeObjectURL(a.href)
+        downloaded = true
+      }
+
+      if (downloaded) {
+        const text = encodeURIComponent("Here's my agentic coding stats using github.com/f/agentlytics")
+        window.open(`https://x.com/intent/post?text=${text}`, '_blank')
+      }
+    } catch (e) {
+      console.error('Share failed:', e)
+    }
+    setSharing(false)
+  }
+
   return (
     <div className="fade-in space-y-3">
+      {/* Share button */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleShare}
+          disabled={sharing}
+          className="flex items-center gap-1.5 px-3 py-1 text-[11px] rounded-md transition hover:opacity-80"
+          style={{ background: '#6366f1', color: '#fff', opacity: sharing ? 0.5 : 1 }}
+        >
+          <Share2 size={12} />
+          {sharing ? 'Generating...' : 'Share Stats'}
+        </button>
+      </div>
+
       {/* Editor breakdown - top */}
       <div className="card p-3">
         <SectionTitle>editors</SectionTitle>
