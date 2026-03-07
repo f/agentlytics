@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <video src="misc/agentlytics.mp4" autoplay loop muted playsinline width="100%"></video>
+  <video src="https://github.com/user-attachments/assets/e6934f58-84e0-4173-b4bf-4b0331dd1428" autoplay loop muted playsinline width="100%"></video>
 </p>
 
 ---
