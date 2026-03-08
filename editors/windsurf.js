@@ -1,20 +1,107 @@
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
 const { execSync } = require('child_process');
-const http = require('http');
 
-const HOME = os.homedir();
-
-// Windsurf-family variants: Windsurf, Windsurf Next, Antigravity
+// Windsurf-family variants: Windsurf, Antigravity
 const VARIANTS = [
   { id: 'windsurf', matchKey: 'ide', matchVal: 'windsurf', https: false },
-  { id: 'windsurf-next', matchKey: 'ide', matchVal: 'windsurf-next', https: false },
   { id: 'antigravity', matchKey: 'appDataDir', matchVal: 'antigravity', https: true },
 ];
 
+// Antigravity model ID to friendly name mapping
+const ANTIGRAVITY_MODEL_MAP = {
+  'MODEL_PLACEHOLDER_M1': 'claude-3-5-sonnet-20241022',
+  'MODEL_PLACEHOLDER_M2': 'claude-3-5-sonnet-20241022',
+  'MODEL_PLACEHOLDER_M3': 'claude-3-5-sonnet-20241022',
+  'MODEL_PLACEHOLDER_M4': 'claude-3-5-haiku-20241022',
+  'MODEL_PLACEHOLDER_M5': 'claude-3-5-haiku-20241022',
+  'MODEL_PLACEHOLDER_M6': 'claude-3-5-haiku-20241022',
+  'MODEL_PLACEHOLDER_M7': 'claude-3-5-sonnet-20241022',
+  'MODEL_PLACEHOLDER_M8': 'claude-3.5-sonnet',
+  'MODEL_PLACEHOLDER_M9': 'claude-3.5-sonnet',
+  'MODEL_PLACEHOLDER_M10': 'claude-3.5-sonnet',
+  'MODEL_CLAUDE_4_5_SONNET': 'claude-4.5-sonnet',
+};
+
+function normalizeAntigravityModel(modelId) {
+  if (!modelId) return null;
+  return ANTIGRAVITY_MODEL_MAP[modelId] || modelId;
+}
+
 // ============================================================
-// Find running Windsurf language server (port + CSRF token)
+// Cross-platform process utilities
+// ============================================================
+
+const IS_WINDOWS = process.platform === 'win32';
+
+function getProcessList() {
+  try {
+    if (IS_WINDOWS) {
+      // wmic provides CSV-formatted process data
+      const output = execSync('wmic process get CommandLine,ProcessId /format:csv', {
+        encoding: 'utf-8',
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      // Parse CSV: skip header, split by comma
+      const lines = output.split('\n').slice(1);
+      return lines.map(line => {
+        const parts = line.split(',');
+        if (parts.length < 2) return null;
+        const commandLine = parts.slice(0, -1).join(',').trim().replace(/^"|"$/g, '');
+        const pid = parts[parts.length - 1].trim();
+        return { commandLine, pid };
+      }).filter(Boolean);
+    } else {
+      // ps aux on Unix-like systems
+      const output = execSync('ps aux', { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
+      return output.split('\n').slice(1).map(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 11) return null;
+        const pid = parts[1];
+        const commandLine = parts.slice(10).join(' ');
+        return { commandLine, pid };
+      }).filter(Boolean);
+    }
+  } catch { return []; }
+}
+
+function getListeningPorts(pid) {
+  try {
+    if (IS_WINDOWS) {
+      // netstat -ano shows PID in the last column
+      const output = execSync(`netstat -ano | findstr ${pid}`, {
+        encoding: 'utf-8',
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      const ports = [];
+      for (const line of output.split('\n')) {
+        // Match: 127.0.0.1:PORT ... LISTENING PID
+        // Check if line ends with the PID we're looking for
+        if (!line.trim().endsWith(pid)) continue;
+        const match = line.match(/127\.0\.0\.1:(\d+).*LISTENING/);
+        if (match) {
+          ports.push(parseInt(match[1]));
+        }
+      }
+      return ports;
+    } else {
+      // lsof on Unix-like systems
+      const output = execSync(`lsof -i TCP -P -n -a -p ${pid} 2>/dev/null`, {
+        encoding: 'utf-8',
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      const ports = [];
+      for (const line of output.split('\n')) {
+        const match = line.match(/TCP\s+127\.0\.0\.1:(\d+)\s+\(LISTEN\)/);
+        if (match) {
+          ports.push(parseInt(match[1]));
+        }
+      }
+      return ports;
+    }
+  } catch { return []; }
+}
+
+// ============================================================
+// Find running Windsurf/Antigravity language server (port + CSRF token)
 // ============================================================
 
 let _lsCache = null;
@@ -22,32 +109,57 @@ let _lsCache = null;
 function findLanguageServers() {
   if (_lsCache) return _lsCache;
   _lsCache = [];
-  try {
-    const ps = execSync('ps aux', { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
-    for (const line of ps.split('\n')) {
-      if (!line.includes('language_server_macos') || !line.includes('--csrf_token')) continue;
-      const csrfMatch = line.match(/--csrf_token\s+(\S+)/);
-      const ideMatch = line.match(/--ide_name\s+(\S+)/);
-      const appDirMatch = line.match(/--app_data_dir\s+(\S+)/);
-      if (!csrfMatch) continue;
-      const csrf = csrfMatch[1];
-      const ide = ideMatch ? ideMatch[1] : 'windsurf';
-      const appDataDir = appDirMatch ? appDirMatch[1] : null;
-      // Find port by checking listening sockets for this process
-      const pidMatch = line.match(/^\S+\s+(\d+)/);
-      if (!pidMatch) continue;
-      const pid = pidMatch[1];
-      try {
-        const lsof = execSync(`lsof -i TCP -P -n -a -p ${pid} 2>/dev/null`, { encoding: 'utf-8' });
-        for (const l of lsof.split('\n')) {
-          const portMatch = l.match(/TCP\s+127\.0\.0\.1:(\d+)\s+\(LISTEN\)/);
-          if (portMatch) {
-            _lsCache.push({ ide, appDataDir, port: parseInt(portMatch[1]), csrf, pid });
-          }
-        }
-      } catch { /* skip */ }
+
+  // Language server executable name varies by platform
+  // Windows: language_server_windows_x64.exe, language_server_windows_x.exe, etc.
+  const serverProcessName = IS_WINDOWS
+    ? 'language_server_windows'
+    : process.platform === 'darwin'
+      ? 'language_server_macos'
+      : 'language_server_linux';
+
+  for (const proc of getProcessList()) {
+    const { commandLine, pid } = proc;
+    if (!commandLine.includes(serverProcessName) || !commandLine.includes('--csrf_token')) continue;
+
+    const csrfMatch = commandLine.match(/--csrf_token\s+(\S+)/);
+    const ideMatch = commandLine.match(/--ide_name\s+(\S+)/);
+    const appDirMatch = commandLine.match(/--app_data_dir\s+(\S+)/);
+    if (!csrfMatch) continue;
+
+    const csrf = csrfMatch[1];
+    const ide = ideMatch ? ideMatch[1] : null;
+    const appDataDir = appDirMatch ? appDirMatch[1] : null;
+
+    // Antigravity has a separate extension server CSRF token
+    const extCsrfMatch = commandLine.match(/--extension_server_csrf_token\s+(\S+)/);
+
+    // Check for explicit server port (Antigravity uses --server_port)
+    const serverPortMatch = commandLine.match(/--server_port\s+(\d+)/);
+
+    // Find actual listening ports for this process
+    const ports = getListeningPorts(pid);
+    if (ports.length === 0) continue;
+
+    // Use explicit server_port if available, otherwise use lowest port
+    let port;
+    if (serverPortMatch) {
+      port = parseInt(serverPortMatch[1], 10);
+      // Verify the port is actually listening
+      if (!ports.includes(port)) {
+        port = Math.min(...ports);
+      }
+    } else {
+      port = Math.min(...ports);
     }
-  } catch { /* ps failed */ }
+
+    if (ide || appDataDir) {
+      // Antigravity uses HTTPS on --server_port, Windsurf uses HTTP
+      const isHttps = appDataDir?.includes('antigravity');
+      _lsCache.push({ ide, appDataDir, port, csrf, pid, extCsrf: extCsrfMatch ? extCsrfMatch[1] : null, isHttps });
+    }
+  }
+
   return _lsCache;
 }
 
@@ -55,10 +167,9 @@ function getLsForVariant(variant) {
   const servers = findLanguageServers();
   let matches;
   if (variant.matchKey === 'appDataDir') {
-    matches = servers.filter(s => s.appDataDir === variant.matchVal);
+    matches = servers.filter(s => s.appDataDir?.includes(variant.matchVal));
   } else {
-    // Exclude servers that have appDataDir set (they belong to a different variant)
-    matches = servers.filter(s => s.ide === variant.matchVal && !s.appDataDir);
+    matches = servers.filter(s => s.ide === variant.matchVal);
   }
   return matches.length > 0 ? matches[0] : null;
 }
@@ -67,16 +178,20 @@ function getLsForVariant(variant) {
 // Connect protocol HTTP client for language server RPC
 // ============================================================
 
-function callRpc(port, csrf, method, body, useHttps) {
+function callRpc(port, csrf, method, body, isHttps = false, extCsrf = null, useMainCsrf = false) {
   const data = JSON.stringify(body || {});
-  const scheme = useHttps ? 'https' : 'http';
+  const scheme = isHttps ? 'https' : 'http';
   const url = `${scheme}://127.0.0.1:${port}/exa.language_server_pb.LanguageServerService/${method}`;
-  const insecure = useHttps ? '-k ' : '';
+  const insecure = isHttps ? '-k ' : '';
+
+  // For Antigravity, use main CSRF. For Windsurf, use extension CSRF if available.
+  const actualCsrf = useMainCsrf ? csrf : (extCsrf || csrf);
+
   try {
     const result = execSync(
       `curl -s ${insecure}-X POST ${JSON.stringify(url)} ` +
       `-H "Content-Type: application/json" ` +
-      `-H "x-codeium-csrf-token: ${csrf}" ` +
+      `-H "x-codeium-csrf-token: ${actualCsrf}" ` +
       `-d ${JSON.stringify(data)} ` +
       `--max-time 10`,
       { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 }
@@ -90,7 +205,7 @@ function callRpc(port, csrf, method, body, useHttps) {
 // ============================================================
 
 const name = 'windsurf';
-const sources = ['windsurf', 'windsurf-next', 'antigravity'];
+const sources = ['windsurf', 'antigravity'];
 
 function getChats() {
   const chats = [];
@@ -99,12 +214,17 @@ function getChats() {
     const ls = getLsForVariant(variant);
     if (!ls) continue;
 
-    const resp = callRpc(ls.port, ls.csrf, 'GetAllCascadeTrajectories', {}, variant.https);
+    // Antigravity uses main CSRF, Windsurf uses extension CSRF
+    const useMainCsrf = variant.id === 'antigravity';
+    const resp = callRpc(ls.port, ls.csrf, 'GetAllCascadeTrajectories', {}, ls.isHttps, ls.extCsrf, useMainCsrf);
     if (!resp || !resp.trajectorySummaries) continue;
 
     for (const [cascadeId, summary] of Object.entries(resp.trajectorySummaries)) {
       const ws = (summary.workspaces || [])[0];
       const folder = ws?.workspaceFolderAbsoluteUri?.replace('file://', '') || null;
+      const rawModel = summary.lastGeneratorModelUid;
+      // Normalize Antigravity models so they show correctly in dashboard
+      const normalizedModel = variant.id === 'antigravity' && rawModel ? normalizeAntigravityModel(rawModel) : rawModel;
       chats.push({
         source: variant.id,
         composerId: cascadeId,
@@ -116,9 +236,11 @@ function getChats() {
         encrypted: false,
         _port: ls.port,
         _csrf: ls.csrf,
-        _https: variant.https,
+        _extCsrf: ls.extCsrf,
+        _isHttps: ls.isHttps,
         _stepCount: summary.stepCount,
-        _model: summary.lastGeneratorModelUid,
+        _model: normalizedModel,
+        _rawModel: rawModel,
       });
     }
   }
@@ -129,12 +251,15 @@ function getChats() {
 function getMessages(chat) {
   if (!chat._port || !chat._csrf) return [];
 
+  // Determine if this is Antigravity based on source
+  const isAntigravity = chat.source === 'antigravity';
   const resp = callRpc(chat._port, chat._csrf, 'GetCascadeTrajectory', {
     cascadeId: chat.composerId,
-  }, chat._https);
+  }, chat._isHttps, chat._extCsrf, isAntigravity);
   if (!resp || !resp.trajectory || !resp.trajectory.steps) return [];
 
   const messages = [];
+
   for (const step of resp.trajectory.steps) {
     const type = step.type || '';
     const meta = step.metadata || {};
@@ -148,10 +273,8 @@ function getMessages(chat) {
       const pr = step.plannerResponse;
       const parts = [];
       if (pr.thinking) parts.push(`[thinking] ${pr.thinking}`);
-      // Text content: prefer modifiedResponse > response > textContent
       const text = pr.modifiedResponse || pr.response || pr.textContent || '';
       if (text.trim()) parts.push(text.trim());
-      // Tool calls
       const _toolCalls = [];
       if (pr.toolCalls && pr.toolCalls.length > 0) {
         for (const tc of pr.toolCalls) {
@@ -163,10 +286,12 @@ function getMessages(chat) {
         }
       }
       if (parts.length > 0) {
+        // Try both generatorModel (Antigravity) and generatorModelUid (Windsurf)
+        const model = meta.generatorModel || meta.generatorModelUid;
         messages.push({
           role: 'assistant',
           content: parts.join('\n'),
-          _model: meta.generatorModelUid,
+          _model: isAntigravity && model ? normalizeAntigravityModel(model) : model,
           _toolCalls,
         });
       }
