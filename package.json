@@ -28,7 +28,8 @@
   "scripts": {
     "start": "node index.js",
     "build": "cd ui && npm install && npm run build",
-    "dev": "cd ui && npm run dev"
+    "dev": "cd ui && npm run dev",
+    "test": "node --test"
   },
   "keywords": [
     "cursor",

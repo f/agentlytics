@@ -1,0 +1,9 @@
+{
+  "work_dirs": [
+    {
+      "path": "/Users/test/project-a",
+      "kaos": "local",
+      "last_session_id": "session-no-config"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{"role":"_checkpoint","id":2}
+{"role":"user","content":"Now tell me the deployment risk"}
+{"role":"_usage","token_count":700}
+{"role":"assistant","content":[{"type":"text","text":"The main risk is missing environment validation."}]}
+{"role":"_usage","token_count":760}

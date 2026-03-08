@@ -1,0 +1,4 @@
+{"type":"metadata","protocol_version":"1.1"}
+{"timestamp":1700100000.0,"message":{"type":"TurnBegin","payload":{"user_input":[{"type":"text","text":"First prompt"}]}}}
+{"timestamp":1700100001.0,"message":{"type":"StatusUpdate","payload":{"context_usage":0.1,"token_usage":{"input_other":100,"output":20,"input_cache_read":5,"input_cache_creation":1},"message_id":"msg-mismatch-1"}}}
+{"timestamp":1700100002.0,"message":{"type":"TurnEnd","payload":{}}}

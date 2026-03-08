@@ -6,11 +6,12 @@ const zed = require('./zed');
 const opencode = require('./opencode');
 const codex = require('./codex');
 const gemini = require('./gemini');
+const kimi = require('./kimi');
 const copilot = require('./copilot');
 const cursorAgent = require('./cursor-agent');
 const commandcode = require('./commandcode');
 
-const editors = [cursor, windsurf, claude, vscode, zed, opencode, codex, gemini, copilot, cursorAgent, commandcode];
+const editors = [cursor, windsurf, claude, vscode, zed, opencode, codex, gemini, kimi, copilot, cursorAgent, commandcode];
 
 /**
  * Get all chats from all editor adapters, sorted by most recent first.

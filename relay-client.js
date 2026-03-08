@@ -20,6 +20,7 @@ const EDITOR_LABELS = {
   'opencode': 'OpenCode',
   'codex': 'Codex CLI',
   'gemini-cli': 'Gemini CLI',
+  'kimi-cli': 'Kimi CLI',
   'copilot-cli': 'Copilot CLI',
   'cursor-agent': 'Cursor (Background Agent)',
   'commandcode': 'CommandCode',

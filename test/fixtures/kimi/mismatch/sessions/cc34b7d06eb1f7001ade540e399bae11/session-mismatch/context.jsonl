@@ -1,0 +1,5 @@
+{"role":"_checkpoint","id":0}
+{"role":"user","content":"First prompt"}
+{"role":"assistant","content":[{"type":"text","text":"First answer"}]}
+{"role":"user","content":"Second prompt"}
+{"role":"assistant","content":[{"type":"text","text":"Second answer"}]}
