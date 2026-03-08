@@ -1,0 +1,7 @@
+{"role":"_checkpoint","id":0}
+{"role":"user","content":"Inspect the repository status and summarize the next step"}
+{"role":"_checkpoint","id":1}
+{"role":"_usage","token_count":99}
+{"role":"assistant","content":[{"type":"think","think":"I should inspect the repo first.","encrypted":null},{"type":"text","text":"I will read package.json before summarizing."}],"tool_calls":[{"type":"function","id":"tool_read_package","function":{"name":"ReadFile","arguments":"{\"path\":\"package.json\"}"}}]}
+{"role":"_usage","token_count":150}
+{"role":"tool","tool_call_id":"tool_read_package","content":[{"type":"text","text":"<system>2 lines read from file starting from line 1.</system>"},{"type":"text","text":"1\t{\n2\t  \"name\": \"demo\"\n"}]}

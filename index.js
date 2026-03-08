@@ -228,6 +228,7 @@ const EDITOR_DISPLAY = [
   ['opencode', 'OpenCode'],
   ['codex', 'Codex'],
   ['gemini-cli', 'Gemini CLI'],
+  ['kimi-cli', 'Kimi CLI'],
   ['copilot-cli', 'Copilot CLI'],
   ['cursor-agent', 'Cursor Agent'],
   ['commandcode', 'Command Code'],

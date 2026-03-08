@@ -147,6 +147,24 @@ Adapter behavior:
 - Token usage prefers `last_token_usage`; when only `total_token_usage` exists, the adapter diffs against the previous cumulative totals
 - Models are carried forward from the latest `turn_context`; if none is available, the session still ingests but leaves `_model` unset
 
+### Kimi CLI
+
+Reads from `${KIMI_SHARE_DIR:-~/.kimi}`:
+- `kimi.json` — maps working directories to session hashes via `work_dirs[].path`
+- `config.toml` — optional `default_model` fallback for assistant messages
+- `sessions/<md5(cwd)>/<session-id>/context*.jsonl` — authoritative transcript chunks
+- `sessions/<md5(cwd)>/<session-id>/wire.jsonl` — timestamps and per-assistant token usage
+
+Adapter behavior:
+- Session folders are discovered by enumerating `sessions/*/*`
+- Project folders are resolved by MD5 hashing each `kimi.json` work-dir path and matching it to the session hash
+- Transcript chunks include `context_sub_N.jsonl`, `context_N.jsonl`, and `context.jsonl`, ordered oldest-to-newest with archived chunks first
+- `_checkpoint` and `_usage` transcript records are skipped as visible messages
+- Assistant `tool_calls` become visible `[tool-call: ...]` transcript lines and populate `_toolCalls` analytics
+- Tool messages are condensed from text blocks in tool results and linked back to the originating tool name when possible
+- Token usage comes from `wire.jsonl` `StatusUpdate` events and is only attached when the number of status updates matches the number of assistant turns
+- Historical model attribution is approximate: when no session-level model is stored, assistant messages fall back to `config.toml` `default_model`
+
 ### VS Code / VS Code Insiders
 
 Reads from `~/Library/Application Support/{Code,Code - Insiders}/User/`:
