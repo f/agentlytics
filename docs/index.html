@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentlytics — Unified analytics for your AI coding agents</title>
+  <meta name="description" content="Agentlytics reads local chat history from every major AI coding assistant and presents a unified analytics dashboard. No data ever leaves your machine.">
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ── Hero ──────────────────────────────────── -->
+  <div class="container">
+    <div class="hero">
+      <img src="logo.svg" alt="Agentlytics" class="hero-logo">
+      <h1>Agentlytics</h1>
+      <p class="tagline">Unified analytics for your AI coding agents</p>
+      <p class="editors-list">
+        Cursor · Windsurf · Claude Code · VS Code · Zed · Antigravity · OpenCode · Codex · Gemini CLI · Copilot CLI · Cursor Agent · Command Code
+      </p>
+
+      <div class="badges">
+        <a href="https://www.npmjs.com/package/agentlytics"><img src="https://img.shields.io/npm/v/agentlytics?color=6366f1&label=npm" alt="npm"></a>
+        <img src="https://img.shields.io/badge/editors-14-818cf8" alt="editors">
+        <img src="https://img.shields.io/badge/license-MIT-green" alt="license">
+        <img src="https://img.shields.io/badge/node-%E2%89%A520.19%20%7C%20%E2%89%A522.12-brightgreen" alt="node">
+      </div>
+
+      <div class="hero-install" onclick="navigator.clipboard.writeText('npx agentlytics')">
+        <span class="prompt">$</span> npx agentlytics
+      </div>
+
+      <div class="hero-screenshot">
+        <img src="screenshot.png" alt="Agentlytics dashboard">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Features ──────────────────────────────── -->
+  <section>
+    <div class="container">
+      <h2>Features</h2>
+      <p class="subtitle">Everything you need to understand your AI coding workflows.</p>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-title">📊 Dashboard</div>
+          <div class="feature-desc">KPIs, activity heatmap, editor breakdown, coding streaks, token economy, peak hours, top models & tools.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-title">💬 Sessions</div>
+          <div class="feature-desc">Search, filter, full conversation viewer with syntax highlighting and diff views.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-title">📁 Projects</div>
+          <div class="feature-desc">Per-project analytics: sessions, messages, tokens, models, editor breakdown.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-title">🔬 Deep Analysis</div>
+          <div class="feature-desc">Tool frequency, model distribution, token breakdown with drill-down.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-title">⚖️ Compare</div>
+          <div class="feature-desc">Side-by-side editor comparison with efficiency ratios.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-title">📡 Relay</div>
+          <div class="feature-desc">Multi-user session sharing with MCP server for cross-team AI session querying.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Quick Start ───────────────────────────── -->
+  <section>
+    <div class="container">
+      <h2>Quick Start</h2>
+      <p class="subtitle">One command. No config. No data leaves your machine.</p>
+
+      <pre><code><span style="color:#818cf8">$</span> npx agentlytics</code></pre>
+
+      <p>Opens at <strong style="color:var(--c-white)">http://localhost:4637</strong>. Requires Node.js ≥ 20.19 or ≥ 22.12, macOS.</p>
+
+      <p>To only build the cache database without starting the server:</p>
+      <pre><code><span style="color:#818cf8">$</span> npx agentlytics --collect</code></pre>
+    </div>
+  </section>
+
+  <!-- ── Supported Editors ─────────────────────── -->
+  <section>
+    <div class="container">
+      <h2>Supported Editors</h2>
+      <p class="subtitle">14 editors and counting.</p>
+
+      <table class="editor-table">
+        <thead>
+          <tr>
+            <th>Editor</th>
+            <th>ID</th>
+            <th>Msgs</th>
+            <th>Tools</th>
+            <th>Models</th>
+            <th>Tokens</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Cursor</td><td><code>cursor</code></td><td>✅</td><td>✅</td><td>⚠️</td><td>⚠️</td></tr>
+          <tr><td>Windsurf</td><td><code>windsurf</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Windsurf Next</td><td><code>windsurf-next</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Antigravity</td><td><code>antigravity</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Claude Code</td><td><code>claude-code</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>VS Code</td><td><code>vscode</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>VS Code Insiders</td><td><code>vscode-insiders</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Zed</td><td><code>zed</code></td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
+          <tr><td>OpenCode</td><td><code>opencode</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Codex</td><td><code>codex</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Gemini CLI</td><td><code>gemini-cli</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Copilot CLI</td><td><code>copilot-cli</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Cursor Agent</td><td><code>cursor-agent</code></td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+          <tr><td>Command Code</td><td><code>commandcode</code></td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:16px; font-size:0.88em; color:var(--c-text2)">
+        ⚠️ Windsurf, Windsurf Next, and Antigravity must be running during scan.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── How It Works ──────────────────────────── -->
+  <section>
+    <div class="container">
+      <h2>How It Works</h2>
+      <p class="subtitle">All data stays local. No accounts, no cloud, no telemetry.</p>
+
+      <div class="arch-flow">
+        Editor files/APIs <span class="arrow">→</span> editors/*.js <span class="arrow">→</span> cache.js (SQLite) <span class="arrow">→</span> server.js (REST) <span class="arrow">→</span> React SPA
+      </div>
+
+      <p>All data is normalized into a local SQLite cache at <code>~/.agentlytics/cache.db</code>. The Express server exposes read-only REST endpoints consumed by the React frontend.</p>
+
+      <div class="arch-flow">
+        Relay: &nbsp;join clients <span class="arrow">→</span> POST /relay/sync <span class="arrow">→</span> relay.db (SQLite) <span class="arrow">→</span> MCP server <span class="arrow">→</span> AI clients
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Relay ─────────────────────────────────── -->
+  <section>
+    <div class="container">
+      <h2>Relay</h2>
+      <p class="subtitle">Share AI session context across your team.</p>
+
+      <p>Relay enables multi-user context sharing. One person starts a relay server, others join and share selected project sessions. An MCP server is exposed so AI clients can query across everyone's coding history.</p>
+
+      <h3>Start a relay</h3>
+      <pre><code><span style="color:#818cf8">$</span> npx agentlytics --relay</code></pre>
+      <p>Optionally protect with a password:</p>
+      <pre><code><span style="color:#818cf8">$</span> RELAY_PASSWORD=secret npx agentlytics --relay</code></pre>
+
+      <h3>Join a relay</h3>
+      <pre><code><span style="color:#818cf8">$</span> npx agentlytics --join &lt;host:port&gt; --username &lt;name&gt;</code></pre>
+      <p>If the relay is password-protected:</p>
+      <pre><code><span style="color:#818cf8">$</span> RELAY_PASSWORD=secret npx agentlytics --join &lt;host:port&gt;</code></pre>
+
+      <p>Username is auto-detected from <code>git config user.email</code>. You can override it with <code>--username</code>.</p>
+
+      <h3>MCP Tools</h3>
+      <p>Connect your AI client to the relay's MCP endpoint (<code>http://&lt;host&gt;:4638/mcp</code>) to access these tools:</p>
+      <table class="api-table">
+        <thead><tr><th>Tool</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>list_users</code></td><td>List all connected users and their shared projects</td></tr>
+          <tr><td><code>search_sessions</code></td><td>Full-text search across all users' chat messages</td></tr>
+          <tr><td><code>get_user_activity</code></td><td>Get recent sessions for a specific user</td></tr>
+          <tr><td><code>get_session_detail</code></td><td>Get full conversation messages for a session</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── API ───────────────────────────────────── -->
+  <section>
+    <div class="container">
+      <h2>API Reference</h2>
+      <p class="subtitle">Read-only REST API at <code>http://localhost:4637</code>. All endpoints return JSON.</p>
+
+      <table class="api-table">
+        <thead>
+          <tr><th>Endpoint</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>GET /api/overview</code></td><td>Dashboard KPIs, editors, modes, trends</td></tr>
+          <tr><td><code>GET /api/daily-activity</code></td><td>Daily counts for heatmap</td></tr>
+          <tr><td><code>GET /api/dashboard-stats</code></td><td>Hourly, weekday, streaks, tokens, velocity</td></tr>
+          <tr><td><code>GET /api/chats</code></td><td>Paginated session list</td></tr>
+          <tr><td><code>GET /api/chats/:id</code></td><td>Full chat with messages</td></tr>
+          <tr><td><code>GET /api/projects</code></td><td>Project-level aggregations</td></tr>
+          <tr><td><code>GET /api/deep-analytics</code></td><td>Tool/model/token breakdowns</td></tr>
+          <tr><td><code>GET /api/tool-calls</code></td><td>Individual tool call instances</td></tr>
+          <tr><td><code>GET /api/refetch</code></td><td>SSE: wipe cache and rescan</td></tr>
+        </tbody>
+      </table>
+
+      <p>All endpoints accept optional <code>editor</code> filter. See <a href="https://github.com/f/agentlytics/blob/master/API.md">API.md</a> for full request/response documentation.</p>
+    </div>
+  </section>
+
+  <!-- ── Relay REST API ────────────────────────── -->
+  <section>
+    <div class="container">
+      <h2>Relay REST API</h2>
+      <p class="subtitle">Endpoints for the relay server at port 4638.</p>
+
+      <table class="api-table">
+        <thead><tr><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET /relay/health</code></td><td>Health check and user count</td></tr>
+          <tr><td><code>GET /relay/users</code></td><td>List connected users</td></tr>
+          <tr><td><code>GET /relay/search?q=&lt;query&gt;</code></td><td>Search messages across all users</td></tr>
+          <tr><td><code>GET /relay/activity/:username</code></td><td>User's recent sessions</td></tr>
+          <tr><td><code>GET /relay/session/:chatId</code></td><td>Full session detail</td></tr>
+          <tr><td><code>POST /relay/sync</code></td><td>Receives data from join clients</td></tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:0.88em; color:var(--c-text2)">Relay is designed for trusted local networks. Set <code>RELAY_PASSWORD</code> env on both server and clients to enable password protection.</p>
+    </div>
+  </section>
+
+  <!-- ── Roadmap ───────────────────────────────── -->
+  <section>
+    <div class="container">
+      <h2>Roadmap</h2>
+      <p class="subtitle">What's coming next.</p>
+
+      <ul style="list-style:none; padding:0;">
+        <li style="padding:8px 0; border-bottom:1px solid var(--c-border);">
+          <strong style="color:var(--c-white)">Offline Windsurf/Antigravity support</strong>
+          <span style="display:block; font-size:0.88em; color:var(--c-text2); margin-top:2px;">Read cascade data from local file structure instead of requiring the app to be running.</span>
+        </li>
+        <li style="padding:8px 0; border-bottom:1px solid var(--c-border);">
+          <strong style="color:var(--c-white)">LLM-powered insights</strong>
+          <span style="display:block; font-size:0.88em; color:var(--c-text2); margin-top:2px;">Analyze session patterns, generate summaries, detect coding habits, surface recommendations.</span>
+        </li>
+        <li style="padding:8px 0; border-bottom:1px solid var(--c-border);">
+          <strong style="color:var(--c-white)">Linux & Windows support</strong>
+          <span style="display:block; font-size:0.88em; color:var(--c-text2); margin-top:2px;">Adapt editor paths for non-macOS platforms.</span>
+        </li>
+        <li style="padding:8px 0; border-bottom:1px solid var(--c-border);">
+          <strong style="color:var(--c-white)">Export & reports</strong>
+          <span style="display:block; font-size:0.88em; color:var(--c-text2); margin-top:2px;">PDF/CSV export of analytics and session data.</span>
+        </li>
+        <li style="padding:8px 0;">
+          <strong style="color:var(--c-white)">Cost tracking</strong>
+          <span style="display:block; font-size:0.88em; color:var(--c-text2); margin-top:2px;">Estimate API costs per editor/model based on token usage.</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Footer ────────────────────────────────── -->
+  <footer>
+    <div class="container">
+      <p>MIT — Built by <a href="https://github.com/f">@f</a> · <a href="https://github.com/f/agentlytics">GitHub</a> · <a href="https://www.npmjs.com/package/agentlytics">npm</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>

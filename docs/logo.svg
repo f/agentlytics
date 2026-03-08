@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Dark background -->
+  <rect width="512" height="512" rx="96" fill="#0f0f13"/>
+
+  <!-- TOP-LEFT: Lucide "bot" — indigo -->
+  <g transform="translate(26, 26) scale(8.5)" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M12 8V4H8"/>
+    <rect width="16" height="12" x="4" y="8" rx="2"/>
+    <path d="M2 14h2"/>
+    <path d="M20 14h2"/>
+    <path d="M15 13v2"/>
+    <path d="M9 13v2"/>
+  </g>
+
+  <!-- TOP-RIGHT: Lucide "bot-message-square" — pink -->
+  <g transform="translate(282, 31) scale(8.5)" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M12 6V2H8"/>
+    <path d="M15 11v2"/>
+    <path d="M2 12h2"/>
+    <path d="M20 12h2"/>
+    <path d="M20 16a2 2 0 0 1-2 2H8.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 4 20.286V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/>
+    <path d="M9 11v2"/>
+  </g>
+
+  <!-- BOTTOM-LEFT: Tabler "robot" — emerald -->
+  <g transform="translate(20, 282) scale(9)" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M6 6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2l0-4"/>
+    <path d="M12 2v2"/>
+    <path d="M9 12v9"/>
+    <path d="M15 12v9"/>
+    <path d="M5 16l4-2"/>
+    <path d="M15 14l4 2"/>
+    <path d="M9 18h6"/>
+    <path d="M10 8v.01"/>
+    <path d="M14 8v.01"/>
+  </g>
+
+  <!-- BOTTOM-RIGHT: Lucide "cpu" (AI brain) — amber -->
+  <g transform="translate(282, 282) scale(8.5)" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M12 20v2"/>
+    <path d="M12 2v2"/>
+    <path d="M17 20v2"/>
+    <path d="M17 2v2"/>
+    <path d="M2 12h2"/>
+    <path d="M2 17h2"/>
+    <path d="M2 7h2"/>
+    <path d="M20 12h2"/>
+    <path d="M20 17h2"/>
+    <path d="M20 7h2"/>
+    <path d="M7 20v2"/>
+    <path d="M7 2v2"/>
+    <rect x="4" y="4" width="16" height="16" rx="2"/>
+    <rect x="8" y="8" width="8" height="8" rx="1"/>
+  </g>
+</svg>
