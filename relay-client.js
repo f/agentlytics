@@ -1,9 +1,5 @@
 const chalk = require('chalk');
 const http = require('http');
-const https = require('https');
-const path = require('path');
-const os = require('os');
-const fs = require('fs');
 const readline = require('readline');
 const crypto = require('crypto');
 

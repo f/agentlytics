@@ -2,10 +2,58 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const { getAllChats, getMessages, findChat: findChatRaw, resetCaches } = require('./editors');
+const { getAllChats, getMessages, resetCaches } = require('./editors');
 
 const CACHE_DIR = path.join(os.homedir(), '.agentlytics');
 const CACHE_DB = path.join(CACHE_DIR, 'cache.db');
+
+/**
+ * Normalize folder paths so that case-insensitive duplicates (common on Windows)
+ * are stored as a single canonical entry.
+ *
+ * On Windows (NTFS is case-insensitive):
+ *   1. Normalize separators (forward→back) and resolve `.` / `..`
+ *   2. Try fs.realpathSync.native to get true on-disk casing
+ *   3. Fallback: uppercase drive letter + lowercase rest (since NTFS is CI)
+ *   4. Strip trailing separator
+ *
+ * On macOS/Linux: use realpathSync for symlink resolution, otherwise as-is.
+ */
+function normalizeFolder(folder) {
+  if (!folder) return null;
+
+  // Strip file:// prefix some editors add
+  if (folder.startsWith('file://')) folder = folder.slice(7);
+
+  if (process.platform === 'win32') {
+    // Canonical separators and resolve relative segments
+    folder = path.resolve(folder);
+
+    // Try to get true on-disk casing via native realpath
+    try {
+      folder = fs.realpathSync.native(folder);
+    } catch {
+      // Path doesn't exist — normalize deterministically:
+      // uppercase drive letter, lowercase everything else
+      if (/^[a-zA-Z]:/.test(folder)) {
+        folder = folder[0].toUpperCase() + folder.slice(1).toLowerCase();
+      }
+    }
+
+    // Strip trailing backslash (but keep "D:\")
+    if (folder.length > 3 && folder.endsWith('\\')) folder = folder.slice(0, -1);
+
+    // Use forward slashes for consistent API output across platforms
+    return folder.replace(/\\/g, '/');
+  }
+
+  // macOS / Linux: resolve symlinks via realpathSync
+  try {
+    return fs.realpathSync(folder);
+  } catch {
+    return folder;
+  }
+}
 
 let db = null;
 
@@ -86,6 +134,26 @@ function initDb() {
     CREATE INDEX IF NOT EXISTS idx_tool_calls_name ON tool_calls(tool_name);
     CREATE INDEX IF NOT EXISTS idx_tool_calls_chat ON tool_calls(chat_id);
   `);
+
+  // ── One-time migration v2: full path normalization for Windows ──
+  // Replaces v1 (drive-letter-only) with full case + separator normalization
+  const migV2 = db.prepare("SELECT value FROM meta WHERE key = 'folder_norm_v'").get();
+  if (!migV2 || migV2.value < '2') {
+    if (process.platform === 'win32') {
+      // Re-normalize every folder via JS (SQL can't do realpathSync)
+      const chatFolders = db.prepare("SELECT id, folder FROM chats WHERE folder IS NOT NULL").all();
+      const updChat = db.prepare("UPDATE chats SET folder = ? WHERE id = ?");
+      const tcFolders = db.prepare("SELECT id, folder FROM tool_calls WHERE folder IS NOT NULL").all();
+      const updTc = db.prepare("UPDATE tool_calls SET folder = ? WHERE id = ?");
+
+      const migrateFolders = db.transaction(() => {
+        for (const row of chatFolders) updChat.run(normalizeFolder(row.folder), row.id);
+        for (const row of tcFolders) updTc.run(normalizeFolder(row.folder), row.id);
+      });
+      migrateFolders();
+    }
+    db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('folder_norm_v', '2')").run();
+  }
 }
 
 // ============================================================
@@ -194,6 +262,8 @@ function scanAll(onProgress, opts = {}) {
   const force = opts.force || false;
   if (force || opts.resetCaches) resetCaches();
   const chats = opts.chats || getAllChats();
+  // Normalize folder paths so case-insensitive duplicates merge (Windows drive letters etc.)
+  for (const chat of chats) chat.folder = normalizeFolder(chat.folder);
   const total = chats.length;
   let scanned = 0;
   let analyzed = 0;
@@ -349,7 +419,7 @@ function getCachedOverview(opts = {}) {
     GROUP BY folder ORDER BY count DESC LIMIT 20
   `).all(...params);
   const topProjects = projects.map(p => ({
-    name: p.folder.split('/').slice(-2).join('/'),
+    name: p.folder.split(/[/\\]/).slice(-2).join('/'),
     fullPath: p.folder,
     count: p.count,
   }));
@@ -549,7 +619,7 @@ function getCachedProjects(opts = {}) {
 
     result.push({
       folder: proj.folder,
-      name: proj.folder.split('/').pop(),
+      name: proj.folder.split(/[/\\]/).pop(),
       totalSessions: proj.totalSessions,
       editors: proj.editors,
       firstSeen: proj.firstSeen,
@@ -599,22 +669,13 @@ function safeParseJson(s) {
   try { return JSON.parse(s); } catch { return {}; }
 }
 
-function resetAndRescan(onProgress) {
-  if (db) db.close();
-  if (fs.existsSync(CACHE_DB)) fs.unlinkSync(CACHE_DB);
-  for (const suffix of ['-wal', '-shm']) {
-    if (fs.existsSync(CACHE_DB + suffix)) fs.unlinkSync(CACHE_DB + suffix);
-  }
-  initDb();
-  return scanAll(onProgress);
-}
-
 /**
  * Async version of scanAll that yields the event loop between iterations.
  * Required for SSE streaming so progress events actually flush to the client.
  */
 async function scanAllAsync(onProgress) {
   const chats = getAllChats();
+  for (const chat of chats) chat.folder = normalizeFolder(chat.folder);
   const total = chats.length;
   let scanned = 0;
   let analyzed = 0;
@@ -868,7 +929,6 @@ module.exports = {
   getCachedChat,
   getCachedProjects,
   getCachedToolCalls,
-  resetAndRescan,
   resetAndRescanAsync,
   getCachedDashboardStats,
   getDb,

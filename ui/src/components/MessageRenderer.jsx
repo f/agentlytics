@@ -146,22 +146,3 @@ export default function MessageContent({ content, toolCallDetails }) {
   })
 }
 
-/**
- * Renders a single message bubble with role icon, model tag, and content.
- */
-export function MessageBubble({ msg, toolCallDetails }) {
-  const cfg = ROLE_CONFIG[msg.role] || ROLE_CONFIG.system
-  const Icon = cfg.icon
-  return (
-    <div className="rounded-r-lg px-4 py-3" style={{ borderLeft: `2px solid ${cfg.borderColor}`, background: cfg.bg }}>
-      <div className="flex items-center gap-2 text-xs mb-2" style={{ color: 'var(--c-text2)' }}>
-        <Icon size={13} />
-        <span className="font-medium">{cfg.label}</span>
-        {msg.model && <span className="font-mono" style={{ color: 'var(--c-accent)', opacity: 0.6 }}>· {msg.model}</span>}
-      </div>
-      <div className="text-sm" style={{ color: 'var(--c-text)' }}>
-        <MessageContent content={msg.content} toolCallDetails={toolCallDetails} />
-      </div>
-    </div>
-  )
-}

@@ -46,18 +46,10 @@ function getMessages(chat) {
   return resolvedEditor.getMessages(chat);
 }
 
-/**
- * Find a chat by ID prefix across all editors.
- */
-function findChat(idPrefix) {
-  const chats = getAllChats();
-  return chats.find((c) => c.composerId.startsWith(idPrefix));
-}
-
 function resetCaches() {
   for (const editor of editors) {
     if (typeof editor.resetCache === 'function') editor.resetCache();
   }
 }
 
-module.exports = { getAllChats, getMessages, findChat, editors, resetCaches };
+module.exports = { getAllChats, getMessages, editors, resetCaches };

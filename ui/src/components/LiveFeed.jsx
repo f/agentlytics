@@ -4,15 +4,6 @@ import EditorDot from './EditorDot'
 import { editorLabel, formatNumber } from '../lib/constants'
 import { fetchRelayFeed } from '../lib/api'
 
-function timeAgo(ts) {
-  if (!ts) return ''
-  const diff = Date.now() - ts
-  if (diff < 60000) return 'just now'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-  return `${Math.floor(diff / 86400000)}d ago`
-}
-
 function timeLabel(ts) {
   if (!ts) return ''
   const d = new Date(ts)
@@ -22,7 +13,6 @@ function timeLabel(ts) {
 export default function LiveFeed({ onSessionClick }) {
   const [items, setItems] = useState([])
   const scrollRef = useRef(null)
-  const prevCountRef = useRef(0)
 
   useEffect(() => {
     const load = () => {

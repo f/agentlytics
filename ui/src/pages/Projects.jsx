@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js'
 import { Doughnut, Bar } from 'react-chartjs-2'
-import { Search, MessageSquare, Wrench, Cpu, FolderOpen, Calendar, ArrowRight } from 'lucide-react'
+import { Search, MessageSquare, Wrench, Cpu, FolderOpen, Calendar } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { fetchProjects } from '../lib/api'
 import { editorColor, editorLabel, formatNumber, formatDate, dateRangeToApiParams } from '../lib/constants'

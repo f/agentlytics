@@ -15,7 +15,7 @@ function decompressZstd(buf) {
   const tmpOut = tmpIn.replace('.zst', '.json');
   try {
     fs.writeFileSync(tmpIn, buf);
-    execSync(`zstd -d -f -q ${JSON.stringify(tmpIn)} -o ${JSON.stringify(tmpOut)}`, { stdio: 'pipe' });
+    execSync(`zstd -d -f -q ${JSON.stringify(tmpIn)} -o ${JSON.stringify(tmpOut)}`, { stdio: ['pipe', 'pipe', 'pipe'] });
     const data = fs.readFileSync(tmpOut, 'utf-8');
     return data;
   } finally {
@@ -33,7 +33,7 @@ function queryDb(sql) {
   try {
     const raw = execSync(
       `sqlite3 -json ${JSON.stringify(THREADS_DB)} ${JSON.stringify(sql)}`,
-      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }
     );
     return JSON.parse(raw);
   } catch { return []; }
@@ -44,7 +44,7 @@ function queryBlobHex(id) {
   try {
     const hex = execSync(
       `sqlite3 ${JSON.stringify(THREADS_DB)} "SELECT hex(data) FROM threads WHERE id = '${id}'"`,
-      { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 }
+      { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }
     ).trim();
     if (!hex) return null;
     return Buffer.from(hex, 'hex');

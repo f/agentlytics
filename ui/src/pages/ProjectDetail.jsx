@@ -77,7 +77,6 @@ export default function ProjectDetail() {
   if (!project) return <div className="text-sm py-12 text-center" style={{ color: 'var(--c-text3)' }}>project not found</div>
 
   const editorEntries = Object.entries(project.editors).sort((a, b) => b[1] - a[1])
-  const maxEditorCount = editorEntries.length > 0 ? editorEntries[0][1] : 1
   const allEnabled = !enabledEditors || enabledEditors.size === editorEntries.length
 
   // Derive stats from editor-filtered chats

@@ -14,7 +14,7 @@ function queryDb(sql) {
   try {
     const raw = execSync(
       `sqlite3 -json ${JSON.stringify(DB_PATH)} ${JSON.stringify(sql)}`,
-      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }
     );
     return JSON.parse(raw);
   } catch { return []; }

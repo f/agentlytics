@@ -439,15 +439,4 @@ module.exports = {
   name,
   getChats,
   getMessages,
-  _test: {
-    getSessionsDir,
-    readChatMetadata,
-    parseSessionMessages,
-    normalizeRawUsage,
-    subtractRawUsage,
-    convertToDelta,
-    extractModel,
-    isBootstrapMessage,
-    previewToolOutput,
-  },
 };

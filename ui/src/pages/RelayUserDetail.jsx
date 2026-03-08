@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MessageSquare, FolderOpen, ChevronDown, ChevronRight, Zap, Clock, Hash } from 'lucide-react'
+import { ArrowLeft, MessageSquare, FolderOpen, ChevronDown, ChevronRight, Hash } from 'lucide-react'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import KpiCard from '../components/KpiCard'
@@ -37,8 +37,6 @@ function ProportionBar({ segments, height = 6 }) {
 // Left sidebar: sessions grouped by project (folder-tree)
 function SessionSidebar({ sessions, projects, selectedChat, onSelectChat }) {
   const [collapsed, setCollapsed] = useState(new Set())
-  const [filter, setFilter] = useState(null) // null = all, or project path
-
   const toggle = (key) => {
     setCollapsed(prev => {
       const next = new Set(prev)
@@ -142,7 +140,6 @@ export default function RelayUserDetail() {
   const legendColor = dark ? '#888' : '#555'
   const gridColor = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'
   const txtDim = dark ? '#555' : '#999'
-  const txtColor = dark ? '#888' : '#555'
 
   useEffect(() => {
     if (username) {

@@ -174,15 +174,14 @@ if (noCache) {
   }
 }
 
-// ── Warn about installed-but-not-running Windsurf variants ─
-const WINDSURF_VARIANTS = [
-  { name: 'Windsurf', app: '/Applications/Windsurf.app', dataDir: path.join(HOME, '.codeium', 'windsurf'), ide: 'windsurf' },
-  { name: 'Windsurf Next', app: '/Applications/Windsurf Next.app', dataDir: path.join(HOME, '.codeium', 'windsurf-next'), ide: 'windsurf-next' },
-  { name: 'Antigravity', app: '/Applications/Antigravity.app', dataDir: path.join(HOME, '.codeium', 'antigravity'), ide: 'antigravity' },
-];
+// ── Warn about installed-but-not-running Windsurf variants (macOS only) ─
+if (process.platform === 'darwin') {
+  const WINDSURF_VARIANTS = [
+    { name: 'Windsurf', app: '/Applications/Windsurf.app', dataDir: path.join(HOME, '.codeium', 'windsurf'), ide: 'windsurf' },
+    { name: 'Windsurf Next', app: '/Applications/Windsurf Next.app', dataDir: path.join(HOME, '.codeium', 'windsurf-next'), ide: 'windsurf-next' },
+    { name: 'Antigravity', app: '/Applications/Antigravity.app', dataDir: path.join(HOME, '.codeium', 'antigravity'), ide: 'antigravity' },
+  ];
 
-(() => {
-  // Check which language servers are running
   let runningIdes = [];
   try {
     const ps = execSync('ps aux', { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
@@ -207,7 +206,7 @@ const WINDSURF_VARIANTS = [
     console.log(chalk.dim('    These editors must be open for their sessions to be detected.'));
     console.log('');
   }
-})();
+}
 
 // Initialize cache DB
 cache.initDb();

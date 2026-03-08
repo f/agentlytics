@@ -52,9 +52,7 @@
     "@modelcontextprotocol/sdk": "^1.27.1",
     "better-sqlite3": "^12.6.2",
     "chalk": "^4.1.2",
-    "commander": "^14.0.3",
     "express": "^4.22.1",
-    "inquirer": "^13.3.0",
     "log-update": "^4.0.0",
     "open": "^8.4.2"
   }

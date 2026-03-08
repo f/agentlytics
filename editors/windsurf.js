@@ -23,7 +23,7 @@ function findLanguageServers() {
   if (_lsCache) return _lsCache;
   _lsCache = [];
   try {
-    const ps = execSync('ps aux', { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+    const ps = execSync('ps aux', { encoding: 'utf-8', maxBuffer: 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
     for (const line of ps.split('\n')) {
       if (!line.includes('language_server_macos') || !line.includes('--csrf_token')) continue;
       const csrfMatch = line.match(/--csrf_token\s+(\S+)/);
@@ -38,7 +38,7 @@ function findLanguageServers() {
       if (!pidMatch) continue;
       const pid = pidMatch[1];
       try {
-        const lsof = execSync(`lsof -i TCP -P -n -a -p ${pid} 2>/dev/null`, { encoding: 'utf-8' });
+        const lsof = execSync(`lsof -i TCP -P -n -a -p ${pid} 2>/dev/null`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
         for (const l of lsof.split('\n')) {
           const portMatch = l.match(/TCP\s+127\.0\.0\.1:(\d+)\s+\(LISTEN\)/);
           if (portMatch) {
@@ -79,7 +79,7 @@ function callRpc(port, csrf, method, body, useHttps) {
       `-H "x-codeium-csrf-token: ${csrf}" ` +
       `-d ${JSON.stringify(data)} ` +
       `--max-time 10`,
-      { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 }
+      { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }
     );
     return JSON.parse(result);
   } catch { return null; }
