@@ -192,4 +192,6 @@ function getMessages(chat) {
   return result;
 }
 
-module.exports = { name, getChats, getMessages };
+const labels = { 'cursor-agent': 'Cursor Agent' };
+
+module.exports = { name, labels, getChats, getMessages };

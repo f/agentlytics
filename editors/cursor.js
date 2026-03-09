@@ -341,4 +341,6 @@ function getMessages(chat) {
   return msgs;
 }
 
-module.exports = { name, getChats, getMessages };
+const labels = { 'cursor': 'Cursor' };
+
+module.exports = { name, labels, getChats, getMessages };

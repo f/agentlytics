@@ -24,19 +24,30 @@ function findLanguageServers() {
   _lsCache = [];
   try {
     const ps = execSync('ps aux', { encoding: 'utf-8', maxBuffer: 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
+    // Also grab env vars for processes that use WINDSURF_CSRF_TOKEN instead of --csrf_token
+    const psEnv = execSync('ps eww -A', { encoding: 'utf-8', maxBuffer: 2 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }).split('\n');
+    const envCsrfByPid = {};
+    for (const envLine of psEnv) {
+      const envCsrf = envLine.match(/WINDSURF_CSRF_TOKEN=(\S+)/);
+      if (envCsrf) {
+        const envPid = envLine.match(/^\s*(\d+)/);
+        if (envPid) envCsrfByPid[envPid[1]] = envCsrf[1];
+      }
+    }
+
     for (const line of ps.split('\n')) {
-      if (!line.includes('language_server_macos') || !line.includes('--csrf_token')) continue;
+      if (!line.includes('language_server_macos')) continue;
       const csrfMatch = line.match(/--csrf_token\s+(\S+)/);
       const ideMatch = line.match(/--ide_name\s+(\S+)/);
       const appDirMatch = line.match(/--app_data_dir\s+(\S+)/);
-      if (!csrfMatch) continue;
-      const csrf = csrfMatch[1];
-      const ide = ideMatch ? ideMatch[1] : 'windsurf';
-      const appDataDir = appDirMatch ? appDirMatch[1] : null;
-      // Find port by checking listening sockets for this process
       const pidMatch = line.match(/^\S+\s+(\d+)/);
       if (!pidMatch) continue;
       const pid = pidMatch[1];
+      const csrf = csrfMatch ? csrfMatch[1] : envCsrfByPid[pid] || null;
+      if (!csrf) continue;
+      const ide = ideMatch ? ideMatch[1] : 'windsurf';
+      const appDataDir = appDirMatch ? appDirMatch[1] : null;
+      // Find port by checking listening sockets for this process
       try {
         const lsof = execSync(`lsof -i TCP -P -n -a -p ${pid} 2>/dev/null`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
         for (const l of lsof.split('\n')) {
@@ -336,4 +347,6 @@ function getMessages(chat) {
 
 function resetCache() { _lsCache = null; }
 
-module.exports = { name, sources, getChats, getMessages, resetCache };
+const labels = { 'windsurf': 'Windsurf', 'windsurf-next': 'Windsurf Next', 'antigravity': 'Antigravity' };
+
+module.exports = { name, sources, labels, getChats, getMessages, resetCache };

@@ -14,6 +14,7 @@ export const EDITOR_COLORS = {
   'copilot-cli': '#8957e5',
   'cursor-agent': '#f59e0b',
   'commandcode': '#e11d48',
+  'goose': '#333333',
 };
 
 export const EDITOR_LABELS = {
@@ -32,6 +33,7 @@ export const EDITOR_LABELS = {
   'copilot-cli': 'Copilot CLI',
   'cursor-agent': 'Cursor Agent',
   'commandcode': 'Command Code',
+  'goose': 'Goose',
 };
 
 export function editorColor(src) {

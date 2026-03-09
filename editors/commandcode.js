@@ -156,4 +156,6 @@ function extractAssistantContent(content) {
   return { text: parts.join('\n') || '', toolCalls };
 }
 
-module.exports = { name, getChats, getMessages };
+const labels = { 'commandcode': 'Command Code' };
+
+module.exports = { name, labels, getChats, getMessages };

@@ -171,4 +171,6 @@ function getMessages(chat) {
   return result;
 }
 
-module.exports = { name, getChats, getMessages };
+const labels = { 'gemini-cli': 'Gemini CLI' };
+
+module.exports = { name, labels, getChats, getMessages };

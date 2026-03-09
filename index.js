@@ -188,7 +188,7 @@ const WINDSURF_VARIANTS = [
   try {
     const ps = execSync('ps aux', { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
     for (const line of ps.split('\n')) {
-      if (!line.includes('language_server_macos') || !line.includes('--csrf_token')) continue;
+      if (!line.includes('language_server_macos')) continue;
       const ideMatch = line.match(/--ide_name\s+(\S+)/);
       const appDirMatch = line.match(/--app_data_dir\s+(\S+)/);
       if (ideMatch) runningIdes.push(ideMatch[1]);
@@ -215,23 +215,7 @@ const WINDSURF_VARIANTS = [
 cache.initDb();
 
 // ── Detect editors & collect sessions ───────────────────────
-const { editors: editorModules } = require('./editors');
-const EDITOR_DISPLAY = [
-  ['cursor', 'Cursor'],
-  ['windsurf', 'Windsurf'],
-  ['windsurf-next', 'Windsurf Next'],
-  ['antigravity', 'Antigravity'],
-  ['claude-code', 'Claude Code'],
-  ['vscode', 'VS Code'],
-  ['vscode-insiders', 'VS Code Insiders'],
-  ['zed', 'Zed'],
-  ['opencode', 'OpenCode'],
-  ['codex', 'Codex'],
-  ['gemini-cli', 'Gemini CLI'],
-  ['copilot-cli', 'Copilot CLI'],
-  ['cursor-agent', 'Cursor Agent'],
-  ['commandcode', 'Command Code'],
-];
+const { editors: editorModules, editorLabels } = require('./editors');
 
 console.log(chalk.dim('  Looking for AI coding agents...'));
 const allChats = [];
@@ -247,8 +231,11 @@ allChats.sort((a, b) => (b.lastUpdatedAt || b.createdAt || 0) - (a.lastUpdatedAt
 const bySource = {};
 for (const chat of allChats) bySource[chat.source] = (bySource[chat.source] || 0) + 1;
 
-for (const [src, label] of EDITOR_DISPLAY) {
-  const count = bySource[src] || 0;
+const displayList = Object.entries(editorLabels)
+  .map(([src, label]) => [src, label, bySource[src] || 0])
+  .sort((a, b) => b[2] - a[2]);
+
+for (const [src, label, count] of displayList) {
   if (count > 0) {
     console.log(`  ${chalk.green('✓')} ${chalk.bold(label.padEnd(18))} ${chalk.dim(`${count} session${count === 1 ? '' : 's'}`)}`);
   } else {

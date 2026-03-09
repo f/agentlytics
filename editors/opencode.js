@@ -100,4 +100,6 @@ function getMessages(chat) {
   return result;
 }
 
-module.exports = { name, getChats, getMessages };
+const labels = { 'opencode': 'OpenCode' };
+
+module.exports = { name, labels, getChats, getMessages };

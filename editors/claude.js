@@ -200,4 +200,6 @@ function extractAssistantContent(content) {
   return { text: parts.join('\n') || '', toolCalls };
 }
 
-module.exports = { name, getChats, getMessages };
+const labels = { 'claude-code': 'Claude Code' };
+
+module.exports = { name, labels, getChats, getMessages };

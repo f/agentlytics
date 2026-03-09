@@ -315,4 +315,6 @@ function getMessages(chat) {
   return messages;
 }
 
-module.exports = { name, getChats, getMessages };
+const labels = { 'vscode': 'VS Code', 'vscode-insiders': 'VS Code Insiders' };
+
+module.exports = { name, labels, getChats, getMessages };

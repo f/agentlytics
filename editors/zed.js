@@ -135,4 +135,6 @@ function extractContent(content) {
   return { text: parts.join('\n') || '', toolCalls };
 }
 
-module.exports = { name, getChats, getMessages };
+const labels = { 'zed': 'Zed' };
+
+module.exports = { name, labels, getChats, getMessages };

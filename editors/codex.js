@@ -435,8 +435,11 @@ function safeParseJson(value) {
   }
 }
 
+const labels = { 'codex': 'Codex' };
+
 module.exports = {
   name,
+  labels,
   getChats,
   getMessages,
 };

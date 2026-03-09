@@ -9,8 +9,15 @@ const gemini = require('./gemini');
 const copilot = require('./copilot');
 const cursorAgent = require('./cursor-agent');
 const commandcode = require('./commandcode');
+const goose = require('./goose');
 
-const editors = [cursor, windsurf, claude, vscode, zed, opencode, codex, gemini, copilot, cursorAgent, commandcode];
+const editors = [cursor, windsurf, claude, vscode, zed, opencode, codex, gemini, copilot, cursorAgent, commandcode, goose];
+
+// Build a unified source → display-label map from all editor modules
+const editorLabels = {};
+for (const editor of editors) {
+  if (editor.labels) Object.assign(editorLabels, editor.labels);
+}
 
 /**
  * Get all chats from all editor adapters, sorted by most recent first.
@@ -52,4 +59,4 @@ function resetCaches() {
   }
 }
 
-module.exports = { getAllChats, getMessages, editors, resetCaches };
+module.exports = { getAllChats, getMessages, editors, editorLabels, resetCaches };

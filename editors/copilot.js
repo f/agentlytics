@@ -171,4 +171,6 @@ function safeParse(str) {
   try { return JSON.parse(str); } catch { return {}; }
 }
 
-module.exports = { name, getChats, getMessages };
+const labels = { 'copilot-cli': 'Copilot CLI' };
+
+module.exports = { name, labels, getChats, getMessages };
