@@ -376,9 +376,11 @@ function subtractRawUsage(current, previous) {
 }
 
 function convertToDelta(raw) {
+  const cacheRead = Math.min(raw.cached_input_tokens, raw.input_tokens);
+  const billableInput = Math.max(raw.input_tokens - cacheRead, 0);
   return {
-    inputTokens: raw.input_tokens,
-    cacheRead: Math.min(raw.cached_input_tokens, raw.input_tokens),
+    inputTokens: billableInput,
+    cacheRead,
     outputTokens: raw.output_tokens,
     totalTokens: raw.total_tokens > 0 ? raw.total_tokens : raw.input_tokens + raw.output_tokens,
   };
