@@ -15,6 +15,7 @@ export const EDITOR_COLORS = {
   'cursor-agent': '#f59e0b',
   'commandcode': '#e11d48',
   'goose': '#333333',
+  'kiro': '#ff9900',
 };
 
 export const EDITOR_LABELS = {
@@ -34,6 +35,7 @@ export const EDITOR_LABELS = {
   'cursor-agent': 'Cursor Agent',
   'commandcode': 'Command Code',
   'goose': 'Goose',
+  'kiro': 'Kiro',
 };
 
 export function editorColor(src) {

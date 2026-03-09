@@ -10,8 +10,9 @@ const copilot = require('./copilot');
 const cursorAgent = require('./cursor-agent');
 const commandcode = require('./commandcode');
 const goose = require('./goose');
+const kiro = require('./kiro');
 
-const editors = [cursor, windsurf, claude, vscode, zed, opencode, codex, gemini, copilot, cursorAgent, commandcode, goose];
+const editors = [cursor, windsurf, claude, vscode, zed, opencode, codex, gemini, copilot, cursorAgent, commandcode, goose, kiro];
 
 // Build a unified source → display-label map from all editor modules
 const editorLabels = {};
