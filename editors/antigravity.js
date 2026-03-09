@@ -1,5 +1,18 @@
 const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 const os = require('os');
+const Database = require('better-sqlite3');
+const { getAppDataPath } = require('./base');
+
+const HOME = os.homedir();
+const ANTIGRAVITY_USER_DIR = path.join(getAppDataPath('Antigravity'), 'User');
+const ANTIGRAVITY_GLOBAL_STORAGE_DB = path.join(ANTIGRAVITY_USER_DIR, 'globalStorage', 'state.vscdb');
+const ANTIGRAVITY_BRAIN_DIR = path.join(HOME, '.gemini', 'antigravity', 'brain');
+const OFFLINE_TRAJECTORY_SUMMARIES_KEYS = [
+  'antigravityUnifiedStateSync.trajectorySummaries',
+  'unifiedStateSync.trajectorySummaries',
+];
 
 // Static fallback for legacy placeholders no longer returned by the LS
 const LEGACY_MODEL_MAP = {
@@ -51,6 +64,454 @@ function normalizeModel(modelId) {
   const label = map[modelId];
   if (label) return labelToModelId(label);
   return modelId;
+}
+
+function fileUriToPath(uri) {
+  try {
+    const parsed = new URL(uri);
+    if (parsed.protocol !== 'file:') return null;
+    let filePath = decodeURIComponent(parsed.pathname);
+    if (IS_WINDOWS && /^\/[A-Za-z]:/.test(filePath)) filePath = filePath.slice(1);
+    return filePath || null;
+  } catch {
+    return null;
+  }
+}
+
+function base64ToBytes(b64) {
+  try {
+    return Uint8Array.from(Buffer.from(String(b64 || '').trim(), 'base64'));
+  } catch {
+    return null;
+  }
+}
+
+function bytesToUtf8(bytes) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+function readVarint(buf, offset) {
+  let value = 0;
+  let shift = 0;
+  let i = offset;
+  while (i < buf.length) {
+    const b = buf[i];
+    i += 1;
+    value += (b & 0x7f) * (2 ** shift);
+    if ((b & 0x80) === 0) return { value, offset: i };
+    shift += 7;
+    if (shift > 53) return null;
+  }
+  return null;
+}
+
+function readLengthDelimited(buf, offset) {
+  const lenRes = readVarint(buf, offset);
+  if (!lenRes) return null;
+  const len = lenRes.value;
+  const start = lenRes.offset;
+  const end = start + len;
+  if (end > buf.length) return null;
+  return { bytes: buf.subarray(start, end), offset: end };
+}
+
+function skipField(buf, offset, wireType) {
+  if (wireType === 0) {
+    const v = readVarint(buf, offset);
+    return v ? { offset: v.offset } : null;
+  }
+  if (wireType === 1) {
+    const end = offset + 8;
+    return end <= buf.length ? { offset: end } : null;
+  }
+  if (wireType === 2) {
+    const ld = readLengthDelimited(buf, offset);
+    return ld ? { offset: ld.offset } : null;
+  }
+  if (wireType === 5) {
+    const end = offset + 4;
+    return end <= buf.length ? { offset: end } : null;
+  }
+  return null;
+}
+
+function* iterAllUtf8StringsInProto(buf, maxDepth, depth = 0) {
+  if (depth > maxDepth) return;
+  let offset = 0;
+  while (offset < buf.length) {
+    const tagRes = readVarint(buf, offset);
+    if (!tagRes) return;
+    offset = tagRes.offset;
+
+    const wireType = tagRes.value & 0x7;
+    if (wireType !== 2) {
+      const skipped = skipField(buf, offset, wireType);
+      if (!skipped) return;
+      offset = skipped.offset;
+      continue;
+    }
+
+    const ld = readLengthDelimited(buf, offset);
+    if (!ld) return;
+    offset = ld.offset;
+
+    const asString = bytesToUtf8(ld.bytes);
+    if (asString !== null) yield asString;
+    yield* iterAllUtf8StringsInProto(ld.bytes, maxDepth, depth + 1);
+  }
+}
+
+function parseTimestampMessage(bytes) {
+  let seconds = null;
+  let nanos = 0;
+  let offset = 0;
+
+  while (offset < bytes.length) {
+    const tagRes = readVarint(bytes, offset);
+    if (!tagRes) return null;
+    offset = tagRes.offset;
+
+    const fieldNumber = tagRes.value >>> 3;
+    const wireType = tagRes.value & 0x7;
+
+    if (wireType === 0) {
+      const valueRes = readVarint(bytes, offset);
+      if (!valueRes) return null;
+      offset = valueRes.offset;
+      if (fieldNumber === 1) seconds = valueRes.value;
+      if (fieldNumber === 2) nanos = valueRes.value;
+      continue;
+    }
+
+    const skipped = skipField(bytes, offset, wireType);
+    if (!skipped) return null;
+    offset = skipped.offset;
+  }
+
+  if (seconds == null) return null;
+  if (seconds < 946684800 || seconds > 4102444800) return null;
+  if (nanos >= 1e9) nanos = 0;
+
+  return Math.round((seconds * 1000) + (nanos / 1e6));
+}
+
+function findTimestampInProto(bytes, maxDepth = 2, depth = 0) {
+  const direct = parseTimestampMessage(bytes);
+  if (direct) return direct;
+  if (depth >= maxDepth) return null;
+
+  let offset = 0;
+  while (offset < bytes.length) {
+    const tagRes = readVarint(bytes, offset);
+    if (!tagRes) return null;
+    offset = tagRes.offset;
+
+    const wireType = tagRes.value & 0x7;
+    if (wireType !== 2) {
+      const skipped = skipField(bytes, offset, wireType);
+      if (!skipped) return null;
+      offset = skipped.offset;
+      continue;
+    }
+
+    const ld = readLengthDelimited(bytes, offset);
+    if (!ld) return null;
+    offset = ld.offset;
+
+    const nested = findTimestampInProto(ld.bytes, maxDepth, depth + 1);
+    if (nested) return nested;
+  }
+
+  return null;
+}
+
+function readGlobalStateValue(key) {
+  if (!fs.existsSync(ANTIGRAVITY_GLOBAL_STORAGE_DB)) return null;
+
+  let db = null;
+  try {
+    db = new Database(ANTIGRAVITY_GLOBAL_STORAGE_DB, { readonly: true, fileMustExist: true });
+    const row = db.prepare('SELECT value FROM ItemTable WHERE key = ?').get(key);
+    if (!row) return null;
+    const v = row.value;
+    if (typeof v === 'string') return v;
+    if (Buffer.isBuffer(v) || v instanceof Uint8Array) return Buffer.from(v).toString('utf-8');
+    return v == null ? null : String(v);
+  } catch {
+    return null;
+  } finally {
+    if (db) db.close();
+  }
+}
+
+function extractFolderFromSummaryProtoBytes(summaryProtoBytes) {
+  for (const s of iterAllUtf8StringsInProto(summaryProtoBytes, 6)) {
+    const match = s.match(/#?file:\/\/[^\s\x00-\x1f"]+/);
+    if (!match) continue;
+    let uri = match[0];
+    if (uri.startsWith('#')) uri = uri.slice(1);
+    const folder = fileUriToPath(uri);
+    if (folder) return folder;
+  }
+  return null;
+}
+
+function extractOfflineMetaFromSummaryProtoBytes(summaryProtoBytes) {
+  let title = null;
+  let primaryCount = 0;
+  let secondaryCount = 0;
+  const timestamps = [];
+
+  let offset = 0;
+  while (offset < summaryProtoBytes.length) {
+    const tagRes = readVarint(summaryProtoBytes, offset);
+    if (!tagRes) break;
+    offset = tagRes.offset;
+
+    const fieldNumber = tagRes.value >>> 3;
+    const wireType = tagRes.value & 0x7;
+
+    if (wireType === 0) {
+      const valueRes = readVarint(summaryProtoBytes, offset);
+      if (!valueRes) break;
+      offset = valueRes.offset;
+      if (fieldNumber === 2) primaryCount = valueRes.value;
+      if (fieldNumber === 16) secondaryCount = valueRes.value;
+      continue;
+    }
+
+    if (wireType === 2) {
+      const ld = readLengthDelimited(summaryProtoBytes, offset);
+      if (!ld) break;
+      offset = ld.offset;
+
+      if (fieldNumber === 1 && !title) {
+        const text = bytesToUtf8(ld.bytes);
+        if (text && text.trim()) title = text.trim();
+        continue;
+      }
+
+      if (fieldNumber === 3 || fieldNumber === 7 || fieldNumber === 10 || fieldNumber === 15) {
+        const ts = fieldNumber === 15 ? findTimestampInProto(ld.bytes, 2) : (parseTimestampMessage(ld.bytes) || findTimestampInProto(ld.bytes, 1));
+        if (ts) timestamps.push(ts);
+        continue;
+      }
+
+      continue;
+    }
+
+    const skipped = skipField(summaryProtoBytes, offset, wireType);
+    if (!skipped) break;
+    offset = skipped.offset;
+  }
+
+  const uniqueTimestamps = [...new Set(timestamps)].sort((a, b) => a - b);
+
+  return {
+    title,
+    folder: extractFolderFromSummaryProtoBytes(summaryProtoBytes),
+    bubbleCount: Math.max(primaryCount || 0, secondaryCount || 0),
+    createdAt: uniqueTimestamps[0] || null,
+    lastUpdatedAt: uniqueTimestamps[uniqueTimestamps.length - 1] || null,
+  };
+}
+
+function buildOfflineMetaMapFromGlobalStateTrajectorySummariesValue(outerValueBase64) {
+  const outerBytes = base64ToBytes(outerValueBase64);
+  if (!outerBytes) return {};
+
+  const chats = {};
+  let offset = 0;
+
+  while (offset < outerBytes.length) {
+    const tagRes = readVarint(outerBytes, offset);
+    if (!tagRes) break;
+    offset = tagRes.offset;
+
+    const fieldNumber = tagRes.value >>> 3;
+    const wireType = tagRes.value & 0x7;
+    if (fieldNumber !== 1 || wireType !== 2) {
+      const skipped = skipField(outerBytes, offset, wireType);
+      if (!skipped) break;
+      offset = skipped.offset;
+      continue;
+    }
+
+    const entryLd = readLengthDelimited(outerBytes, offset);
+    if (!entryLd) break;
+    offset = entryLd.offset;
+
+    let composerId = null;
+    let summaryBase64 = null;
+    let entryOffset = 0;
+
+    while (entryOffset < entryLd.bytes.length) {
+      const entryTag = readVarint(entryLd.bytes, entryOffset);
+      if (!entryTag) break;
+      entryOffset = entryTag.offset;
+
+      const entryField = entryTag.value >>> 3;
+      const entryWire = entryTag.value & 0x7;
+
+      if (entryField === 1 && entryWire === 2) {
+        const keyLd = readLengthDelimited(entryLd.bytes, entryOffset);
+        if (!keyLd) break;
+        entryOffset = keyLd.offset;
+        composerId = bytesToUtf8(keyLd.bytes);
+        continue;
+      }
+
+      if (entryField === 2 && entryWire === 2) {
+        const valueLd = readLengthDelimited(entryLd.bytes, entryOffset);
+        if (!valueLd) break;
+        entryOffset = valueLd.offset;
+
+        let valueOffset = 0;
+        while (valueOffset < valueLd.bytes.length) {
+          const valueTag = readVarint(valueLd.bytes, valueOffset);
+          if (!valueTag) break;
+          valueOffset = valueTag.offset;
+
+          const valueField = valueTag.value >>> 3;
+          const valueWire = valueTag.value & 0x7;
+          if (valueField === 1 && valueWire === 2) {
+            const summaryLd = readLengthDelimited(valueLd.bytes, valueOffset);
+            if (!summaryLd) break;
+            valueOffset = summaryLd.offset;
+            summaryBase64 = bytesToUtf8(summaryLd.bytes);
+            break;
+          }
+
+          const skipped = skipField(valueLd.bytes, valueOffset, valueWire);
+          if (!skipped) break;
+          valueOffset = skipped.offset;
+        }
+
+        continue;
+      }
+
+      const skipped = skipField(entryLd.bytes, entryOffset, entryWire);
+      if (!skipped) break;
+      entryOffset = skipped.offset;
+    }
+
+    if (!composerId || !summaryBase64) continue;
+    const summaryProtoBytes = base64ToBytes(summaryBase64);
+    if (!summaryProtoBytes) continue;
+
+    chats[composerId] = extractOfflineMetaFromSummaryProtoBytes(summaryProtoBytes);
+  }
+
+  return chats;
+}
+
+function getOfflineChats() {
+  for (const key of OFFLINE_TRAJECTORY_SUMMARIES_KEYS) {
+    const value = readGlobalStateValue(key);
+    if (!value) continue;
+
+    const map = buildOfflineMetaMapFromGlobalStateTrajectorySummariesValue(value);
+    const chats = Object.entries(map).map(([composerId, meta]) => ({
+      source: 'antigravity',
+      composerId,
+      name: meta.title || null,
+      createdAt: meta.createdAt || null,
+      lastUpdatedAt: meta.lastUpdatedAt || null,
+      mode: 'cascade',
+      folder: meta.folder || null,
+      encrypted: false,
+      bubbleCount: meta.bubbleCount || 0,
+      _stepCount: meta.bubbleCount || 0,
+      _type: 'antigravity-offline',
+      _dbPath: ANTIGRAVITY_GLOBAL_STORAGE_DB,
+      _rawSource: 'offline-global-state',
+    }));
+
+    if (chats.length > 0) {
+      return chats.sort((a, b) => (b.lastUpdatedAt || b.createdAt || 0) - (a.lastUpdatedAt || a.createdAt || 0));
+    }
+  }
+
+  return [];
+}
+
+function mergeChats(liveChats, offlineChats) {
+  if (liveChats.length === 0) return offlineChats;
+  if (offlineChats.length === 0) return liveChats;
+
+  const map = new Map();
+
+  for (const chat of offlineChats) {
+    map.set(chat.composerId, { ...chat });
+  }
+
+  for (const chat of liveChats) {
+    const existing = map.get(chat.composerId);
+    if (!existing) {
+      map.set(chat.composerId, chat);
+      continue;
+    }
+
+    map.set(chat.composerId, {
+      ...existing,
+      ...chat,
+      name: chat.name || existing.name,
+      createdAt: chat.createdAt || existing.createdAt,
+      lastUpdatedAt: chat.lastUpdatedAt || existing.lastUpdatedAt,
+      folder: chat.folder || existing.folder,
+      bubbleCount: chat.bubbleCount || existing.bubbleCount,
+      _stepCount: chat._stepCount || existing._stepCount,
+    });
+  }
+
+  return Array.from(map.values()).sort((a, b) => (b.lastUpdatedAt || b.createdAt || 0) - (a.lastUpdatedAt || a.createdAt || 0));
+}
+
+function readOfflineArtifactMessages(chat) {
+  const noDataMsg = [{
+    role: 'system',
+    content: 'Offline metadata was found for this Antigravity session, but no local artifact files were available. Start Antigravity to fetch the full conversation transcript.',
+  }];
+
+  const brainDir = path.join(ANTIGRAVITY_BRAIN_DIR, chat.composerId);
+  if (!fs.existsSync(brainDir)) return noDataMsg;
+
+  const artifactNames = ['task.md', 'implementation_plan.md', 'walkthrough.md'];
+  const messages = [{
+    role: 'system',
+    content: 'Partial offline Antigravity view from local artifact files. Start Antigravity to load full cascade step history.',
+  }];
+
+  for (const artifactName of artifactNames) {
+    const artifactPath = path.join(brainDir, artifactName);
+    if (!fs.existsSync(artifactPath)) continue;
+
+    let content = null;
+    try {
+      content = fs.readFileSync(artifactPath, 'utf-8').trim();
+    } catch {
+      content = null;
+    }
+    if (!content) continue;
+
+    let meta = null;
+    try { meta = JSON.parse(fs.readFileSync(`${artifactPath}.metadata.json`, 'utf-8')); } catch {}
+    const header = [`# Offline Artifact: ${artifactName}`];
+    if (meta?.summary) header.push(`Summary: ${meta.summary}`);
+    if (meta?.updatedAt) header.push(`Updated: ${meta.updatedAt}`);
+    header.push('');
+
+    messages.push({
+      role: 'assistant',
+      content: `${header.join('\n')}${content}`,
+    });
+  }
+
+  return messages.length > 1 ? messages : noDataMsg;
 }
 
 // ============================================================
@@ -125,9 +586,10 @@ function getListeningPorts(pid) {
 // ============================================================
 
 let _lsCache = null;
+let _lsCacheCheckedAt = 0;
 
 function findLanguageServer() {
-  if (_lsCache !== null) return _lsCache;
+  if (_lsCache !== null && (Date.now() - _lsCacheCheckedAt) < 10000) return _lsCache || null;
 
   const serverProcessName = IS_WINDOWS
     ? 'language_server_windows'
@@ -158,10 +620,12 @@ function findLanguageServer() {
     }
 
     _lsCache = { port, csrf: csrfMatch[1], pid };
+    _lsCacheCheckedAt = Date.now();
     return _lsCache;
   }
 
   _lsCache = false;
+  _lsCacheCheckedAt = Date.now();
   return null;
 }
 
@@ -197,30 +661,31 @@ const name = 'antigravity';
 
 function getChats() {
   const resp = callRpc('GetAllCascadeTrajectories', {});
-  if (!resp || !resp.trajectorySummaries) return [];
+  const liveChats = [];
 
-  const chats = [];
-  for (const [cascadeId, summary] of Object.entries(resp.trajectorySummaries)) {
-    const ws = (summary.workspaces || [])[0];
-    const folder = ws?.workspaceFolderAbsoluteUri?.replace('file://', '') || null;
-    const rawModel = summary.lastGeneratorModelUid;
-    chats.push({
-      source: 'antigravity',
-      composerId: cascadeId,
-      name: summary.summary || null,
-      createdAt: summary.createdTime ? new Date(summary.createdTime).getTime() : null,
-      lastUpdatedAt: summary.lastModifiedTime ? new Date(summary.lastModifiedTime).getTime() : null,
-      mode: 'cascade',
-      folder,
-      encrypted: false,
-      bubbleCount: summary.stepCount || 0,
-      _stepCount: summary.stepCount,
-      _model: rawModel ? normalizeModel(rawModel) : rawModel,
-      _rawModel: rawModel,
-    });
+  if (resp && resp.trajectorySummaries) {
+    for (const [cascadeId, summary] of Object.entries(resp.trajectorySummaries)) {
+      const ws = (summary.workspaces || [])[0];
+      const folder = ws?.workspaceFolderAbsoluteUri?.replace('file://', '') || null;
+      const rawModel = summary.lastGeneratorModelUid;
+      liveChats.push({
+        source: 'antigravity',
+        composerId: cascadeId,
+        name: summary.summary || null,
+        createdAt: summary.createdTime ? new Date(summary.createdTime).getTime() : null,
+        lastUpdatedAt: summary.lastModifiedTime ? new Date(summary.lastModifiedTime).getTime() : null,
+        mode: 'cascade',
+        folder,
+        encrypted: false,
+        bubbleCount: summary.stepCount || 0,
+        _stepCount: summary.stepCount,
+        _model: rawModel ? normalizeModel(rawModel) : rawModel,
+        _rawModel: rawModel,
+      });
+    }
   }
 
-  return chats;
+  return mergeChats(liveChats, getOfflineChats());
 }
 
 function getSteps(chat) {
@@ -420,7 +885,8 @@ function getMessages(chat) {
     messages.push(...tail);
   }
 
-  return messages;
+  if (messages.length > 0) return messages;
+  return readOfflineArtifactMessages(chat);
 }
 
 // ============================================================
@@ -500,7 +966,7 @@ function getUsage() {
   };
 }
 
-function resetCache() { _lsCache = null; _modelMap = null; }
+function resetCache() { _lsCache = null; _lsCacheCheckedAt = 0; _modelMap = null; }
 
 const labels = { 'antigravity': 'Antigravity' };
 
