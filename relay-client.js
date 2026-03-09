@@ -4,27 +4,9 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const cache = require('./cache');
+const { EDITOR_LABELS } = require('./editors');
 
 const SYNC_INTERVAL_MS = 30000; // 30 seconds
-
-const EDITOR_LABELS = {
-  'cursor': 'Cursor',
-  'windsurf': 'Windsurf',
-  'windsurf-next': 'Windsurf Next',
-  'antigravity': 'Antigravity',
-  'claude-code': 'Claude Code',
-  'claude': 'Claude Code',
-  'vscode': 'VS Code',
-  'vscode-insiders': 'VS Code Insiders',
-  'zed': 'Zed',
-  'opencode': 'OpenCode',
-  'codex': 'Codex CLI',
-  'gemini-cli': 'Gemini CLI',
-  'kimi-cli': 'Kimi CLI',
-  'copilot-cli': 'Copilot CLI',
-  'cursor-agent': 'Cursor (Background Agent)',
-  'commandcode': 'CommandCode',
-};
 
 /**
  * Interactive project picker using readline (no external deps beyond Node built-ins).
