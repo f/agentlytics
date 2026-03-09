@@ -3,6 +3,8 @@
  * Accepts an `opts` object to toggle sections on/off.
  */
 
+const { EDITOR_LABELS, EDITOR_COLORS } = require('./editors');
+
 function fmt(n) {
   if (n == null) return '0';
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -17,44 +19,6 @@ function fmtCost(n) {
   if (n >= 100) return '$' + Math.round(n);
   return '$' + n.toFixed(2);
 }
-
-const EDITOR_COLORS = {
-  'cursor': '#f59e0b',
-  'windsurf': '#06b6d4',
-  'windsurf-next': '#22d3ee',
-  'antigravity': '#a78bfa',
-  'claude-code': '#f97316',
-  'claude': '#f97316',
-  'vscode': '#3b82f6',
-  'vscode-insiders': '#60a5fa',
-  'zed': '#10b981',
-  'opencode': '#ec4899',
-  'codex': '#0f766e',
-  'gemini-cli': '#4285f4',
-  'kimi-cli': '#84cc16',
-  'copilot-cli': '#8957e5',
-  'cursor-agent': '#f59e0b',
-  'commandcode': '#e11d48',
-};
-
-const EDITOR_LABELS = {
-  'cursor': 'Cursor',
-  'windsurf': 'Windsurf',
-  'windsurf-next': 'WS Next',
-  'antigravity': 'Antigravity',
-  'claude-code': 'Claude Code',
-  'claude': 'Claude Code',
-  'vscode': 'VS Code',
-  'vscode-insiders': 'VS Code Ins.',
-  'zed': 'Zed',
-  'opencode': 'OpenCode',
-  'codex': 'Codex',
-  'gemini-cli': 'Gemini CLI',
-  'kimi-cli': 'Kimi CLI',
-  'copilot-cli': 'Copilot CLI',
-  'cursor-agent': 'Cursor Agent',
-  'commandcode': 'Cmd Code',
-};
 
 /**
  * @param {object} overview  — from getCachedOverview()
