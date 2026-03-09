@@ -1,24 +1,36 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { execSync } = require('child_process');
 
 const GOOSE_DIR = path.join(os.homedir(), '.local', 'share', 'goose', 'sessions');
 const DB_PATH = path.join(GOOSE_DIR, 'sessions.db');
 const CONFIG_PATH = path.join(os.homedir(), '.config', 'goose', 'config.yaml');
 
 // ============================================================
-// Query SQLite via CLI
+// Query SQLite via better-sqlite3 (cross-platform)
 // ============================================================
+
+let Database;
+function getDatabase() {
+  if (!Database) {
+    try {
+      Database = require('better-sqlite3');
+    } catch {
+      // better-sqlite3 not available
+    }
+  }
+  return Database;
+}
 
 function queryDb(sql) {
   if (!fs.existsSync(DB_PATH)) return [];
+  const Db = getDatabase();
+  if (!Db) return []; // Fallback if better-sqlite3 not available
   try {
-    const raw = execSync(
-      `sqlite3 -json ${JSON.stringify(DB_PATH)} ${JSON.stringify(sql)}`,
-      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }
-    );
-    return JSON.parse(raw);
+    const db = new Db(DB_PATH, { readonly: true });
+    const rows = db.prepare(sql).all();
+    db.close();
+    return rows;
   } catch { return []; }
 }
 

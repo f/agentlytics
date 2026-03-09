@@ -333,6 +333,34 @@ app.put('/api/config', (req, res) => {
   }
 });
 
+app.get('/api/check-ai', async (req, res) => {
+  const folder = req.query.folder;
+  if (!folder) return res.status(400).json({ error: 'folder query param required' });
+  try {
+    const { execFile } = require('child_process');
+    const isWindows = process.platform === 'win32';
+    // On Windows, use npx.cmd with shell; on Unix, use npx directly
+    const cmd = isWindows ? 'npx.cmd' : 'npx';
+    const result = await new Promise((resolve, reject) => {
+      execFile(cmd, ['-y', 'check-ai', '--json', folder], {
+        timeout: 60000,
+        maxBuffer: 1024 * 1024,
+        shell: isWindows
+      }, (err, stdout) => {
+        try {
+          const json = JSON.parse(stdout);
+          resolve(json);
+        } catch (e) {
+          reject(new Error(err ? err.message : 'Failed to parse check-ai output'));
+        }
+      });
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/all-projects', (req, res) => {
   try {
     res.json(cache.getCachedProjects({ ...parseDateOpts(req.query), includeHidden: true }));

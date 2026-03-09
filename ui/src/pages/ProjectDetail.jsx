@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search, FolderOpen, Calendar, MessageSquare, Wrench, Cpu, Zap, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Search, FolderOpen, Calendar, MessageSquare, Wrench, Cpu, Zap, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import { fetchProjects, fetchChats, fetchCosts } from '../lib/api'
@@ -10,6 +10,7 @@ import KpiCard from '../components/KpiCard'
 import EditorIcon from '../components/EditorIcon'
 import SectionTitle from '../components/SectionTitle'
 import ChatSidebar from '../components/ChatSidebar'
+import AiAuditCard from '../components/AiAuditCard'
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement)
 
@@ -232,6 +233,10 @@ export default function ProjectDetail() {
           ) : <div className="text-[11px] py-8 text-center" style={{ color: 'var(--c-text3)' }}>no tool data</div>}
         </div>
       </div>
+
+      {/* AI Readiness Audit */}
+      {console.log('Rendering AiAuditCard, folder:', folder)}
+      <AiAuditCard folder={folder} />
 
       {/* Sessions */}
       <div>

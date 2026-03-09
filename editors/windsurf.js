@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -18,18 +18,19 @@ const IS_WINDOWS = process.platform === 'win32';
 function getProcessList() {
   try {
     if (IS_WINDOWS) {
-      // wmic provides CSV-formatted process data
-      const output = execSync('wmic process get CommandLine,ProcessId /format:csv', {
+      // Use PowerShell Get-Process (WMIC is deprecated in Windows 10/11)
+      const output = execFileSync('powershell', ['-Command', 'Get-Process | Select-Object Id, Path, CommandLine | ConvertTo-Csv -NoTypeInformation'], {
         encoding: 'utf-8',
         maxBuffer: 10 * 1024 * 1024,
       });
-      // Parse CSV: skip header, split by comma
+      // Parse CSV: skip header
       const lines = output.split('\n').slice(1);
       return lines.map(line => {
         const parts = line.split(',');
-        if (parts.length < 2) return null;
-        const commandLine = parts.slice(0, -1).join(',').trim().replace(/^"|"$/g, '');
-        const pid = parts[parts.length - 1].trim();
+        if (parts.length < 3) return null;
+        const pid = parts[0].trim().replace(/^"|"$/g, '');
+        const commandLine = parts[2].trim().replace(/^"|"$/g, '');
+        if (!pid || !commandLine) return null;
         return { commandLine, pid };
       }).filter(Boolean);
     } else {
@@ -49,8 +50,8 @@ function getProcessList() {
 function getListeningPorts(pid) {
   try {
     if (IS_WINDOWS) {
-      // netstat -ano shows PID in the last column
-      const output = execSync(`netstat -ano | findstr ${pid}`, {
+      // Use PowerShell to get netstat output and filter by PID
+      const output = execFileSync('powershell', ['-Command', `netstat -ano | Select-String "${pid}$"`], {
         encoding: 'utf-8',
         maxBuffer: 10 * 1024 * 1024,
       });

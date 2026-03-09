@@ -203,6 +203,12 @@ export async function fetchToolCalls(name, opts = {}) {
   return res.json();
 }
 
+export async function fetchCheckAi(folder) {
+  const q = new URLSearchParams({ folder });
+  const res = await fetch(`${BASE}/api/check-ai?${q}`);
+  return res.json();
+}
+
 export async function fetchUsage() {
   const res = await fetch(`${BASE}/api/usage`);
   return res.json();

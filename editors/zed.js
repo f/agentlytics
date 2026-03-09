@@ -1,7 +1,6 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { execSync } = require('child_process');
 
 const Database = require('better-sqlite3');
 
@@ -24,7 +23,7 @@ function getZedDataPath() {
 const THREADS_DB = path.join(getZedDataPath(), 'threads', 'threads.db');
 
 // ============================================================
-// Decompress zstd blob via CLI
+// Decompress zstd blob via CLI (with cross-platform support)
 // ============================================================
 
 function decompressZstd(buf) {
@@ -32,7 +31,28 @@ function decompressZstd(buf) {
   const tmpOut = tmpIn.replace('.zst', '.json');
   try {
     fs.writeFileSync(tmpIn, buf);
-    execSync(`zstd -d -f -q ${JSON.stringify(tmpIn)} -o ${JSON.stringify(tmpOut)}`, { stdio: ['pipe', 'pipe', 'pipe'] });
+
+    // Try zstd CLI first
+    try {
+      const { execFileSync } = require('child_process');
+      const zstdCmd = process.platform === 'win32' ? 'zstd.exe' : 'zstd';
+      execFileSync(zstdCmd, ['-d', '-f', '-q', tmpIn, '-o', tmpOut], { stdio: ['pipe', 'pipe', 'pipe'] });
+    } catch {
+      // Fallback: try using Node.js zstd library if available
+      try {
+        const zlib = require('zlib');
+        // Check if Node version supports zstd natively (v22+)
+        if (zlib.createZstdDecompress) {
+          const decompressed = zlib.zstdDecompressSync(buf);
+          fs.writeFileSync(tmpOut, decompressed);
+        } else {
+          throw new Error('zstd not available');
+        }
+      } catch {
+        throw new Error('zstd decompression not available on this system');
+      }
+    }
+
     const data = fs.readFileSync(tmpOut, 'utf-8');
     return data;
   } finally {
