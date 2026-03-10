@@ -7,6 +7,23 @@ const { generateShareSvg } = require('./share-image');
 
 const app = express();
 app.use(express.json());
+
+// CORS for Tauri (tauri:// in prod, localhost in dev)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && (
+    origin.startsWith('tauri://') ||
+    origin.startsWith('http://tauri.localhost') ||
+    origin.startsWith('http://localhost')
+  )) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================

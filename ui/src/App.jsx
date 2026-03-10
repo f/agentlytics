@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
-import { Activity, BarChart3, GitCompare, MessageSquare, FolderOpen, DollarSign, CreditCard, Sun, Moon, RefreshCw, AlertTriangle, Github, Terminal, Database, Users, Plug, Copy, Check, Settings as SettingsIcon, Package, ChevronDown } from 'lucide-react'
-import { fetchOverview, refetchAgents, fetchMode, fetchRelayConfig, getAuthToken, setOnAuthFailure } from './lib/api'
+import { Activity, BarChart3, GitCompare, MessageSquare, FolderOpen, DollarSign, CreditCard, Sun, Moon, RefreshCw, AlertTriangle, Github, Terminal, Database, Settings as SettingsIcon, Package, ChevronDown } from 'lucide-react'
+import { fetchOverview, refetchAgents } from './lib/api'
 import { useTheme } from './lib/theme'
 import AnimatedLogo from './components/AnimatedLogo'
-import AnimatedLoader from './components/AnimatedLoader'
-import LoginScreen from './components/LoginScreen'
 import Dashboard from './pages/Dashboard'
 import Sessions from './pages/Sessions'
 import DeepAnalysis from './pages/DeepAnalysis'
@@ -17,8 +15,6 @@ import SqlViewer from './pages/SqlViewer'
 import Artifacts from './pages/Artifacts'
 import Settings from './pages/Settings'
 import Subscriptions from './pages/Subscriptions'
-import RelayDashboard from './pages/RelayDashboard'
-import RelayUserDetail from './pages/RelayUserDetail'
 
 function NavDropdown({ icon: Icon, label, items }) {
   const [open, setOpen] = useState(false)
@@ -70,43 +66,20 @@ export default function App() {
   const [overview, setOverview] = useState(null)
   const [refetchState, setRefetchState] = useState(null) // null | { scanned, total }
   const [live, setLive] = useState(false)
-  const [mode, setMode] = useState(null) // 'local' | 'relay'
-  const [needsAuth, setNeedsAuth] = useState(false)
-  const [authed, setAuthed] = useState(!!getAuthToken())
   const liveRef = useRef(null)
   const { dark, toggle } = useTheme()
-  const [mcpOpen, setMcpOpen] = useState(false)
-  const [mcpCopied, setMcpCopied] = useState(false)
-  const [relayPassword, setRelayPassword] = useState('')
-
-  useEffect(() => {
-    setOnAuthFailure(() => setAuthed(false))
-  }, [])
-
-  useEffect(() => {
-    fetchMode().then(data => {
-      setMode(data.mode || 'local')
-      setNeedsAuth(!!data.auth)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (mode === 'relay' && authed) {
-      fetchRelayConfig().then(c => setRelayPassword(c.relayPassword || '')).catch(() => {})
-    }
-  }, [mode, authed])
 
   const refreshOverview = useCallback(() => {
     fetchOverview().then(setOverview).catch(() => {})
   }, [])
 
   useEffect(() => {
-    if (mode === 'local') refreshOverview()
-  }, [mode])
+    refreshOverview()
+  }, [])
 
   // Live mode: refetch overview every 60s
   useEffect(() => {
-    if (live && mode === 'local') {
+    if (live) {
       liveRef.current = setInterval(() => {
         refreshOverview()
       }, 60000)
@@ -127,15 +100,10 @@ export default function App() {
     setRefetchState(null)
   }
 
-  const isRelay = mode === 'relay'
-  const showLogin = isRelay && needsAuth && !authed
-
   const location = useLocation()
   const isFullWidth = location.pathname === '/artifacts'
 
-  const nav = isRelay ? [
-    { to: '/', icon: Users, label: 'Team' },
-  ] : [
+  const nav = [
     { to: '/', icon: Activity, label: 'Dashboard' },
     { to: '/sessions', icon: MessageSquare, label: 'Sessions' },
     { to: '/projects', icon: FolderOpen, label: 'Projects' },
@@ -151,16 +119,12 @@ export default function App() {
     { to: '/sql', icon: Database, label: 'SQL' },
   ]
 
-  if (showLogin) {
-    return <LoginScreen onSuccess={() => setAuthed(true)} />
-  }
-
   return (
     <div className="min-h-screen">
-      <header className="border-b px-4 py-1.5 flex items-center gap-3 sticky top-0 z-50 backdrop-blur-xl" style={{ borderColor: 'var(--c-border)', background: 'var(--c-header)' }}>
-        <span className="flex items-center gap-1.5 text-xs font-bold tracking-tight" style={{ color: 'var(--c-white)' }}>
+      <header data-tauri-drag-region className="border-b pl-20 pr-4 py-1.5 flex items-center gap-3 sticky top-0 z-50 backdrop-blur-xl" style={{ borderColor: 'var(--c-border)', background: 'var(--c-header)' }}>
+        <span className="flex items-center gap-1.5 text-xs font-bold tracking-tight pointer-events-none select-none" style={{ color: 'var(--c-white)' }}>
           <AnimatedLogo size={18} />
-          Agentlytics{isRelay && <span className="ml-1.5 text-[10px] font-medium px-1.5 py-0.5" style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>relay</span>}
+          Agentlytics
         </span>
         <nav className="flex gap-0.5 ml-2">
           {nav.map((item) => item.children ? (
@@ -182,8 +146,6 @@ export default function App() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          {!isRelay && (
-            <>
               <button
                 onClick={() => setLive(!live)}
                 className="flex items-center gap-1.5 px-2 py-0.5 text-[11px] transition"
@@ -215,19 +177,6 @@ export default function App() {
               <span className="text-[11px]" style={{ color: 'var(--c-text2)' }}>
                 {overview ? `${overview.totalChats} sessions` : '...'}
               </span>
-            </>
-          )}
-          {isRelay && (
-            <button
-              onClick={() => { setMcpOpen(true); setMcpCopied(false) }}
-              className="flex items-center gap-1.5 px-2 py-0.5 text-[11px] transition hover:bg-[var(--c-card)]"
-              style={{ color: '#818cf8', border: '1px solid var(--c-border)' }}
-              title="MCP Connection"
-            >
-              <Plug size={10} />
-              Connect
-            </button>
-          )}
           <NavLink
             to="/settings"
             className="p-1 rounded transition hover:bg-[var(--c-card)]"
@@ -254,16 +203,7 @@ export default function App() {
         </div>
       )}
 
-      <main className={isRelay ? 'px-0' : isFullWidth ? 'p-0 overflow-hidden' : 'p-4 max-w-[1400px] mx-auto'}>
-        {mode === null ? (
-          <AnimatedLoader label="Loading..." />
-        ) : isRelay ? (
-          <Routes>
-            <Route path="/" element={<RelayDashboard />} />
-            <Route path="/relay" element={<RelayDashboard />} />
-            <Route path="/relay/user/:username" element={<RelayUserDetail />} />
-          </Routes>
-        ) : (
+      <main className={isFullWidth ? 'p-0 overflow-hidden' : 'p-4 max-w-[1400px] mx-auto'}>
           <Routes>
             <Route path="/" element={<Dashboard overview={overview} />} />
             <Route path="/projects" element={<Projects overview={overview} />} />
@@ -278,7 +218,6 @@ export default function App() {
             <Route path="/sql" element={<SqlViewer />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
-        )}
       </main>
 
       <footer className={`border-t mt-8 px-4 py-3 flex items-center justify-between text-[11px]${isFullWidth ? ' hidden' : ''}`} style={{ borderColor: 'var(--c-border)', color: 'var(--c-text3)' }}>
@@ -297,52 +236,6 @@ export default function App() {
         </span>
       </footer>
 
-      {/* MCP Config Modal */}
-      {mcpOpen && (
-        <>
-          <div className="fixed inset-0 z-[60]" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setMcpOpen(false)} />
-          <div
-            className="fixed z-[70] w-[440px] max-w-[90vw] p-5 rounded shadow-2xl"
-            style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'var(--c-bg)', border: '1px solid var(--c-border)' }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-[13px] font-bold" style={{ color: 'var(--c-white)' }}>
-                <Plug size={13} className="inline mr-1.5" style={{ color: '#818cf8' }} />
-                Connection Config
-              </div>
-              <button onClick={() => setMcpOpen(false)} className="text-[18px] leading-none px-1 hover:opacity-70 transition" style={{ color: 'var(--c-text3)' }}>&times;</button>
-            </div>
-
-            <div className="text-[12px] font-medium mb-1.5" style={{ color: 'var(--c-white)' }}>MCP Config</div>
-            <div className="flex items-center justify-between mb-1">
-              <div className="text-[10px]" style={{ color: 'var(--c-text3)' }}>Add to your AI client's MCP settings</div>
-              <button
-                onClick={() => {
-                  const json = JSON.stringify({ "mcpServers": { "agentlytics": { "url": `${window.location.origin}/mcp` } } }, null, 2)
-                  navigator.clipboard.writeText(json)
-                  setMcpCopied(true)
-                  setTimeout(() => setMcpCopied(false), 2000)
-                }}
-                className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] transition hover:bg-[var(--c-bg3)]"
-                style={{ border: '1px solid var(--c-border)', color: mcpCopied ? '#22c55e' : 'var(--c-text2)' }}
-              >
-                {mcpCopied ? <><Check size={9} /> Copied</> : <><Copy size={9} /> Copy</>}
-              </button>
-            </div>
-            <pre
-              className="text-[11px] px-3 py-2 overflow-x-auto mb-4"
-              style={{ background: 'var(--c-bg3)', border: '1px solid var(--c-border)', color: 'var(--c-text)', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.6 }}
-            >{`{\n  "mcpServers": {\n    "agentlytics": {\n      "url": "${window.location.origin}/mcp"\n    }\n  }\n}`}</pre>
-
-            <div className="text-[12px] font-medium mb-1.5" style={{ color: 'var(--c-white)' }}>Join Command</div>
-            <div className="text-[10px] mb-1" style={{ color: 'var(--c-text3)' }}>Share with your team to start syncing sessions</div>
-            <pre
-              className="text-[11px] px-3 py-2 overflow-x-auto"
-              style={{ background: 'var(--c-bg3)', border: '1px solid var(--c-border)', color: 'var(--c-text)', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.6 }}
-            >{`cd /path/to/your-project\nRELAY_PASSWORD=${relayPassword || '<pass>'} npx agentlytics --join ${window.location.host}`}</pre>
-          </div>
-        </>
-      )}
     </div>
   )
 }

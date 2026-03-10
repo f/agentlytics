@@ -1,0 +1,5 @@
+#!/bin/bash
+# Tauri sidecar wrapper — launches the Node.js backend
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+exec node "$PROJECT_ROOT/sidecar.js" "$@"

@@ -143,6 +143,10 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
 # UI build output (built from ui/ source)
 public/assets/
 public/index.html

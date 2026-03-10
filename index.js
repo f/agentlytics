@@ -8,120 +8,8 @@ const { execSync } = require('child_process');
 
 const HOME = os.homedir();
 const PORT = process.env.PORT || 4637;
-const RELAY_PORT = process.env.RELAY_PORT || 4638;
 const noCache = process.argv.includes('--no-cache');
 const collectOnly = process.argv.includes('--collect');
-const isRelay = process.argv.includes('--relay');
-const joinIndex = process.argv.indexOf('--join');
-const isJoin = joinIndex !== -1;
-
-// ── Relay mode ───────────────────────────────────────────────
-if (isRelay) {
-  const { initRelayDb, getRelayDb, createRelayApp } = require('./relay-server');
-  const { wireMcpToExpress } = require('./mcp-server');
-
-  console.log('');
-  console.log(chalk.bold('  ⚡ Agentlytics Relay'));
-  console.log(chalk.dim('  Multi-user context sharing server'));
-  console.log('');
-
-  initRelayDb();
-  console.log(chalk.green('  ✓ Relay database initialized'));
-
-  const app = createRelayApp();
-  wireMcpToExpress(app, getRelayDb);
-  console.log(chalk.green('  ✓ MCP server registered'));
-
-  if (process.env.RELAY_PASSWORD) {
-    console.log(chalk.green('  ✓ Password protection enabled'));
-  } else {
-    console.log(chalk.yellow('  ⚠ No password set (set RELAY_PASSWORD env to protect)'));
-  }
-
-  app.listen(RELAY_PORT, () => {
-    const localIp = getLocalIp();
-    const relayUrl = `http://${localIp}:${RELAY_PORT}`;
-
-    console.log('');
-    console.log(chalk.green(`  ✓ Relay server running on port ${RELAY_PORT}`));
-    console.log('');
-    console.log(chalk.bold('  Share this command with your team:'));
-    console.log('');
-    console.log(chalk.cyan(`    npx agentlytics --join ${localIp}:${RELAY_PORT} --username <name>`));
-    console.log('');
-    console.log(chalk.bold('  MCP server endpoint (add to your AI client):'));
-    console.log('');
-    console.log(chalk.cyan(`    ${relayUrl}/mcp`));
-    console.log('');
-    console.log(chalk.dim('  REST endpoints:'));
-    console.log(chalk.dim(`    GET  ${relayUrl}/relay/health`));
-    console.log(chalk.dim(`    GET  ${relayUrl}/relay/users`));
-    console.log(chalk.dim(`    GET  ${relayUrl}/relay/search?q=<query>`));
-    console.log(chalk.dim(`    GET  ${relayUrl}/relay/activity/<username>`));
-    console.log(chalk.dim(`    GET  ${relayUrl}/relay/session/<chatId>`));
-    console.log('');
-    console.log(chalk.dim('  Press Ctrl+C to stop'));
-    console.log('');
-  });
-
-  // Skip the rest of the normal flow
-  return;
-}
-
-// ── Join mode ────────────────────────────────────────────────
-if (isJoin) {
-  (async () => {
-    const relayAddress = process.argv[joinIndex + 1];
-    const usernameIndex = process.argv.indexOf('--username');
-    let username = usernameIndex !== -1 ? process.argv[usernameIndex + 1] : null;
-
-    if (!relayAddress) {
-      console.error(chalk.red('\n  ✗ Missing relay address. Usage: npx agentlytics --join <host:port> --username <name>\n'));
-      process.exit(1);
-    }
-
-    // Auto-detect username from git config if not provided
-    if (!username) {
-      try {
-        const gitEmail = execSync('git config user.email', { encoding: 'utf-8' }).trim();
-        if (gitEmail) username = gitEmail;
-      } catch {}
-    }
-
-    // If still no username, ask interactively
-    if (!username) {
-      const readline = require('readline');
-      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-      username = await new Promise(r => {
-        rl.question(chalk.bold('\n  Enter your username: '), (answer) => {
-          rl.close();
-          r(answer.trim());
-        });
-      });
-      if (!username) {
-        console.error(chalk.red('\n  ✗ Username is required.\n'));
-        process.exit(1);
-      }
-    }
-
-    const { startJoinClient } = require('./relay-client');
-    startJoinClient(relayAddress, username);
-  })();
-
-  // Skip the rest of the normal flow
-  return;
-}
-
-// ── Helper: get local IP for relay ───────────────────────────
-function getLocalIp() {
-  const interfaces = os.networkInterfaces();
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
-    }
-  }
-  return 'localhost';
-}
 
 // ── ASCII banner ─────────────────────────────────────────
 const c1 = chalk.hex('#818cf8'), c2 = chalk.hex('#f472b6'), c3 = chalk.hex('#34d399'), c4 = chalk.hex('#fbbf24');
@@ -283,10 +171,6 @@ const BOT_STYLES = [
   app.listen(PORT, () => {
     const url = `http://localhost:${PORT}`;
     console.log(chalk.green(`  ✓ Dashboard ready at ${chalk.bold.white(url)}`));
-    console.log('');
-    console.log(chalk.dim('  💡 Share sessions with your team:'));
-    console.log(chalk.dim(`     npx agentlytics --relay                        Start a relay server`));
-    console.log(chalk.dim(`     npx agentlytics --join <host:port> --username   Join a relay server`));
     console.log('');
     console.log(chalk.dim('  Press Ctrl+C to stop\n'));
 

@@ -43,6 +43,19 @@ npx agentlytics
 
 Opens at **http://localhost:4637**. Requires Node.js ≥ 20.19 or ≥ 22.12, macOS. No data ever leaves your machine.
 
+### Desktop App
+
+Download the native desktop app (no Node.js required):
+
+| Platform | Download |
+|----------|----------|
+| **macOS** (Apple Silicon) | [`.dmg`](https://github.com/f/agentlytics/releases/latest) |
+| **macOS** (Intel) | [`.dmg`](https://github.com/f/agentlytics/releases/latest) |
+| **Windows** (64-bit) | [`.msi`](https://github.com/f/agentlytics/releases/latest) |
+| **Linux** (x64) | [`.deb` / `.AppImage`](https://github.com/f/agentlytics/releases/latest) |
+
+Built with [Tauri](https://tauri.app) — lightweight, fast, runs entirely on your machine.
+
 ```
 $ npx agentlytics
 
@@ -79,7 +92,7 @@ npx agentlytics --collect
 - **Deep Analysis** — Tool frequency heatmaps, model distribution, token breakdown, and filterable drill-down analytics
 - **Compare** — Side-by-side editor comparison with efficiency ratios, token usage, and session patterns
 - **Subscriptions** — Live view of your editor plans, usage quotas, remaining credits, and rate limits across Cursor, Windsurf, Claude Code, Copilot, Codex, and more
-- **Relay** — Share AI session context across your team via MCP
+- **Desktop App** — Native macOS, Windows & Linux app via [Tauri](https://tauri.app)
 
 ## Supported Editors
 
@@ -104,89 +117,13 @@ npx agentlytics --collect
 
 > Windsurf, Windsurf Next, and Antigravity must be running during scan.
 
-## Relay
-
-Relay enables multi-user context sharing across a team. One person starts a relay server, others join and share selected project sessions. An MCP server is exposed so AI clients can query across everyone's coding history.
-
-### Start a relay
-
-```bash
-npx agentlytics --relay
-```
-
-Optionally protect with a password:
-
-```bash
-RELAY_PASSWORD=secret npx agentlytics --relay
-```
-
-This starts a relay server on port `4638` and prints the join command and MCP endpoint:
-
-```
-  ⚡ Agentlytics Relay
-
-  Share this command with your team:
-    cd /path/to/project
-    npx agentlytics --join 192.168.1.16:4638
-
-  MCP server endpoint (add to your AI client):
-    http://192.168.1.16:4638/mcp
-```
-
-### Join a relay
-
-```bash
-cd /path/to/your-project
-npx agentlytics --join <host:port>
-```
-
-If the relay is password-protected:
-
-```bash
-RELAY_PASSWORD=secret npx agentlytics --join <host:port>
-```
-
-Username is auto-detected from `git config user.email`. You can override it with `--username <name>`.
-
-You'll be prompted to select which projects to share. The client then syncs session data to the relay every 30 seconds.
-
-### MCP Tools
-
-Connect your AI client to the relay's MCP endpoint (`http://<host>:4638/mcp`) to access these tools:
-
-| Tool | Description |
-|------|-------------|
-| `list_users` | List all connected users and their shared projects |
-| `search_sessions` | Full-text search across all users' chat messages |
-| `get_user_activity` | Get recent sessions for a specific user |
-| `get_session_detail` | Get full conversation messages for a session |
-
-Example query to your AI: *"What did alice do in auth.js?"*
-
-### Relay REST API
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /relay/health` | Health check and user count |
-| `GET /relay/users` | List connected users |
-| `GET /relay/search?q=<query>` | Search messages across all users |
-| `GET /relay/activity/:username` | User's recent sessions |
-| `GET /relay/session/:chatId` | Full session detail |
-| `POST /relay/sync` | Receives data from join clients |
-
-> Relay is designed for trusted local networks. Set `RELAY_PASSWORD` env on both server and clients to enable password protection.
-
 ## How It Works
 
 ```
 Editor files/APIs → editors/*.js → cache.js (SQLite) → server.js (REST) → React SPA
 ```
 
-```
-Relay:  join clients → POST /relay/sync → relay.db (SQLite) → MCP server → AI clients
-```
-
-All data is normalized into a local SQLite cache at `~/.agentlytics/cache.db`. The Express server exposes read-only REST endpoints consumed by the React frontend. Relay data is stored separately in `~/.agentlytics/relay.db`.
+All data is normalized into a local SQLite cache at `~/.agentlytics/cache.db`. The Express server exposes read-only REST endpoints consumed by the React frontend.
 
 ## API
 
@@ -208,6 +145,7 @@ All endpoints accept optional `editor` filter. See **[API.md](API.md)** for full
 
 - [ ] **Offline Windsurf/Antigravity support** — Read cascade data from local file structure instead of requiring the app to be running (see below)
 - [ ] **LLM-powered insights** — Use an LLM to analyze session patterns, generate summaries, detect coding habits, and surface actionable recommendations
+- [x] **Desktop app** — Native macOS, Windows & Linux app via Tauri
 - [ ] **Linux & Windows support** — Adapt editor paths for non-macOS platforms
 - [ ] **Export & reports** — PDF/CSV export of analytics and session data
 - [x] **Cost tracking** — Estimate API costs per editor/model based on token usage

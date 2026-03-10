@@ -116,7 +116,7 @@
       <div class="hidden sm:flex items-center gap-6 text-xs text-gray-400">
         <a href="#features" class="hover:text-white transition">Features</a>
         <a href="#editors" class="hover:text-white transition">Editors</a>
-        <a href="#relay" class="hover:text-white transition">Relay</a>
+        <a href="#download" class="hover:text-white transition">Download</a>
         <a href="https://github.com/f/agentlytics" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 border border-border hover:border-indigo-500/40 transition text-white">
           <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
           GitHub
@@ -178,7 +178,7 @@
             One command to turn scattered AI conversations from <strong class="text-white">16 editors</strong> into a unified analytics dashboard. Sessions, costs, models, tools &mdash; finally in one place.
           </p>
 
-          <div class="flex flex-col sm:flex-row items-center lg:items-start gap-3 mb-6">
+          <div class="flex flex-col sm:flex-row items-center lg:items-start gap-3 mb-4">
             <div
               class="group flex items-center gap-3 px-5 py-3 rounded-lg bg-bg-3 border border-border hover:border-indigo-500/40 transition cursor-pointer glow-sm"
               onclick="copyCmd(this)"
@@ -188,8 +188,23 @@
               <span class="text-[10px] text-gray-500 group-hover:text-gray-400 transition">click to copy</span>
               <span class="copied hidden text-[10px] text-emerald-400">copied!</span>
             </div>
-            <a href="https://github.com/f/agentlytics" class="px-5 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition">
-              View on GitHub
+            <a href="https://github.com/f/agentlytics/releases/latest" class="px-5 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+              Download Desktop App
+            </a>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 mb-6 justify-center lg:justify-start">
+            <a href="https://github.com/f/agentlytics/releases/latest" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 border border-border hover:border-indigo-500/30 transition text-[11px] text-gray-400 hover:text-white">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+              macOS
+            </a>
+            <a href="https://github.com/f/agentlytics/releases/latest" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 border border-border hover:border-indigo-500/30 transition text-[11px] text-gray-400 hover:text-white">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+              Windows
+            </a>
+            <a href="https://github.com/f/agentlytics/releases/latest" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 border border-border hover:border-indigo-500/30 transition text-[11px] text-gray-400 hover:text-white">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.311.015-.466.046C8.25.334 5.48 2.072 3.842 4.66 2.205 7.248 1.564 10.384 2.08 13.322c.378 2.156 1.404 4.093 2.928 5.605 1.524 1.512 3.475 2.538 5.647 2.916a10.74 10.74 0 001.845.164c3.828 0 7.35-2.052 9.22-5.31 1.238-2.155 1.747-4.684 1.434-7.127-.313-2.443-1.455-4.655-3.215-6.23C18.103 1.656 15.383.5 12.504.5zm5.948 12.59c-.064 1.472-.573 2.876-1.47 4.062-.896 1.185-2.13 2.076-3.568 2.575a8.22 8.22 0 01-4.368.233c-1.478-.326-2.804-1.094-3.836-2.222-1.032-1.128-1.706-2.52-1.95-4.027a8.19 8.19 0 01.646-4.406c.548-1.37 1.476-2.547 2.682-3.403 1.206-.856 2.634-1.37 4.127-1.487 1.493-.117 2.99.17 4.327.83 1.337.66 2.46 1.666 3.246 2.912.786 1.246 1.214 2.69 1.237 4.175l-.073.758z"/></svg>
+              Linux
             </a>
           </div>
 
@@ -297,7 +312,7 @@
               <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">&#10003;</span> <span><strong class="text-white">Session browser</strong> &mdash; search & read any conversation</span></li>
               <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">&#10003;</span> <span><strong class="text-white">Editor comparison</strong> &mdash; side-by-side efficiency ratios</span></li>
               <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">&#10003;</span> <span><strong class="text-white">Subscriptions</strong> &mdash; live plan, credits &amp; rate-limit overview</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">&#10003;</span> <span><strong class="text-white">Team relay</strong> &mdash; share sessions via MCP across your team</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">&#10003;</span> <span><strong class="text-white">Desktop app</strong> &mdash; native macOS, Windows &amp; Linux app via Tauri</span></li>
             </ul>
           </div>
         </div>
@@ -424,55 +439,40 @@
     </div>
   </section>
 
-  <!-- ── Relay ─────────────────────────────── -->
-  <section id="relay" class="py-24 border-t border-border">
+  <!-- ── Download ─────────────────────────── -->
+  <section id="download" class="py-24 border-t border-border">
     <div class="max-w-5xl mx-auto px-6">
       <div class="text-center mb-16">
-        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[11px] font-medium mb-5 uppercase tracking-wider">Team feature</div>
-        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">Relay</h2>
-        <p class="text-gray-400 max-w-xl mx-auto">Share AI session context across your team. One person starts a relay server, others join. An MCP server is exposed so AI clients can query across everyone's coding history.</p>
+        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[11px] font-medium mb-5 uppercase tracking-wider">Desktop App</div>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">Download Agentlytics</h2>
+        <p class="text-gray-400 max-w-xl mx-auto">A native desktop app built with Tauri. Lightweight, fast, and runs entirely on your machine.</p>
       </div>
 
-      <div class="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-        <div class="rounded-lg border border-border bg-bg-2 p-5">
-          <h3 class="text-white font-semibold text-sm mb-3">Start a relay</h3>
-          <div class="space-y-2">
-            <code class="block font-mono text-xs"><span class="text-indigo-400">$</span> npx agentlytics --relay</code>
-            <p class="text-[11px] text-gray-500">Optionally protect with a password:</p>
-            <code class="block font-mono text-xs"><span class="text-indigo-400">$</span> RELAY_PASSWORD=secret npx agentlytics --relay</code>
+      <div class="grid sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
+        <a href="https://github.com/f/agentlytics/releases/latest" class="rounded-xl border border-border bg-bg-card p-6 card-hover text-center group">
+          <div class="mb-4 flex justify-center">
+            <svg class="w-10 h-10 text-gray-400 group-hover:text-white transition" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
           </div>
-        </div>
-        <div class="rounded-lg border border-border bg-bg-2 p-5">
-          <h3 class="text-white font-semibold text-sm mb-3">Join a relay</h3>
-          <div class="space-y-2">
-            <code class="block font-mono text-xs"><span class="text-indigo-400">$</span> npx agentlytics --join &lt;host:port&gt; --username &lt;name&gt;</code>
-            <p class="text-[11px] text-gray-500">Username auto-detected from <code class="text-indigo-400/60">git config user.email</code>.</p>
+          <h3 class="text-white font-semibold text-sm mb-1">macOS</h3>
+          <p class="text-[11px] text-gray-500">Apple Silicon &amp; Intel<br>.dmg</p>
+        </a>
+        <a href="https://github.com/f/agentlytics/releases/latest" class="rounded-xl border border-border bg-bg-card p-6 card-hover text-center group">
+          <div class="mb-4 flex justify-center">
+            <svg class="w-10 h-10 text-gray-400 group-hover:text-white transition" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
           </div>
-        </div>
+          <h3 class="text-white font-semibold text-sm mb-1">Windows</h3>
+          <p class="text-[11px] text-gray-500">64-bit<br>.msi / .exe</p>
+        </a>
+        <a href="https://github.com/f/agentlytics/releases/latest" class="rounded-xl border border-border bg-bg-card p-6 card-hover text-center group">
+          <div class="mb-4 flex justify-center">
+            <svg class="w-10 h-10 text-gray-400 group-hover:text-white transition" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.311.015-.466.046C8.25.334 5.48 2.072 3.842 4.66 2.205 7.248 1.564 10.384 2.08 13.322c.378 2.156 1.404 4.093 2.928 5.605 1.524 1.512 3.475 2.538 5.647 2.916a10.74 10.74 0 001.845.164c3.828 0 7.35-2.052 9.22-5.31 1.238-2.155 1.747-4.684 1.434-7.127-.313-2.443-1.455-4.655-3.215-6.23C18.103 1.656 15.383.5 12.504.5zm5.948 12.59c-.064 1.472-.573 2.876-1.47 4.062-.896 1.185-2.13 2.076-3.568 2.575a8.22 8.22 0 01-4.368.233c-1.478-.326-2.804-1.094-3.836-2.222-1.032-1.128-1.706-2.52-1.95-4.027a8.19 8.19 0 01.646-4.406c.548-1.37 1.476-2.547 2.682-3.403 1.206-.856 2.634-1.37 4.127-1.487 1.493-.117 2.99.17 4.327.83 1.337.66 2.46 1.666 3.246 2.912.786 1.246 1.214 2.69 1.237 4.175l-.073.758z"/></svg>
+          </div>
+          <h3 class="text-white font-semibold text-sm mb-1">Linux</h3>
+          <p class="text-[11px] text-gray-500">x64<br>.deb / .AppImage</p>
+        </a>
       </div>
 
-      <div class="mt-10 max-w-2xl mx-auto">
-        <h3 class="text-white font-semibold text-sm mb-4 text-center">MCP Tools</h3>
-        <p class="text-xs text-gray-500 text-center mb-4">Connect your AI client to <code class="text-indigo-400/60">http://&lt;host&gt;:4638/mcp</code></p>
-        <div class="grid grid-cols-2 gap-3">
-          <div class="rounded-lg border border-border bg-bg-card p-3">
-            <code class="text-indigo-400 text-[11px]">list_users</code>
-            <p class="text-[10px] text-gray-500 mt-1">List all connected users and their shared projects</p>
-          </div>
-          <div class="rounded-lg border border-border bg-bg-card p-3">
-            <code class="text-indigo-400 text-[11px]">search_sessions</code>
-            <p class="text-[10px] text-gray-500 mt-1">Full-text search across all users' chat messages</p>
-          </div>
-          <div class="rounded-lg border border-border bg-bg-card p-3">
-            <code class="text-indigo-400 text-[11px]">get_user_activity</code>
-            <p class="text-[10px] text-gray-500 mt-1">Get recent sessions for a specific user</p>
-          </div>
-          <div class="rounded-lg border border-border bg-bg-card p-3">
-            <code class="text-indigo-400 text-[11px]">get_session_detail</code>
-            <p class="text-[10px] text-gray-500 mt-1">Get full conversation messages for a session</p>
-          </div>
-        </div>
-      </div>
+      <p class="text-center mt-8 text-xs text-gray-500">Or install via CLI: <code class="text-indigo-400/80">npx agentlytics</code> &mdash; no download needed.</p>
     </div>
   </section>
 

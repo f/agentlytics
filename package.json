@@ -10,10 +10,8 @@
     "index.js",
     "cache.js",
     "server.js",
+    "sidecar.js",
     "share-image.js",
-    "relay-server.js",
-    "relay-client.js",
-    "mcp-server.js",
     "pricing.js",
     "pricing.json",
     "editors/",
@@ -23,12 +21,16 @@
     "ui/package-lock.json",
     "ui/vite.config.js",
     "ui/eslint.config.js",
+    "src-tauri/",
     "README.md"
   ],
   "scripts": {
     "start": "node index.js",
     "build": "cd ui && npm install && npm run build",
-    "dev": "cd ui && npm run dev"
+    "dev": "cd ui && npm run dev",
+    "tauri:dev": "npx tauri dev",
+    "tauri:build": "npx tauri build",
+    "sidecar": "node sidecar.js"
   },
   "keywords": [
     "cursor",
@@ -57,5 +59,8 @@
     "express": "^4.22.1",
     "log-update": "^4.0.0",
     "open": "^8.4.2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
   }
 }

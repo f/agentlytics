@@ -1,0 +1,5 @@
+@echo off
+:: Tauri sidecar wrapper — launches the Node.js backend
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%\..\..\..") do set "PROJECT_ROOT=%%~fI"
+node "%PROJECT_ROOT%\sidecar.js" %*
