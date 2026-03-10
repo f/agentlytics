@@ -139,10 +139,9 @@ if (!collectOnly && !fs.existsSync(publicIndex) && fs.existsSync(uiDir)) {
   console.log(chalk.cyan('  ⟳ Building dashboard UI (first run)...'));
   try {
     const uiModules = path.join(uiDir, 'node_modules');
-    if (!fs.existsSync(uiModules)) {
-      console.log(chalk.dim('    Installing UI dependencies...'));
-      execSync('npm install --no-audit --no-fund', { cwd: uiDir, stdio: 'pipe' });
-    }
+    if (fs.existsSync(uiModules)) fs.rmSync(uiModules, { recursive: true, force: true });
+    console.log(chalk.dim('    Installing UI dependencies...'));
+    execSync('npm install --no-audit --no-fund', { cwd: uiDir, stdio: 'pipe' });
     console.log(chalk.dim('    Compiling frontend...'));
     execSync('npm run build', { cwd: uiDir, stdio: 'pipe' });
     console.log(chalk.green('  ✓ UI built successfully'));
