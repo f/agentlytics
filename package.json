@@ -28,6 +28,7 @@
     "start": "node index.js",
     "build": "cd ui && npm install && npm run build",
     "dev": "cd ui && npm run dev",
+    "tauri": "tauri",
     "tauri:dev": "npx tauri dev",
     "tauri:build": "npx tauri build",
     "sidecar": "node sidecar.js"
