@@ -5,17 +5,25 @@ const os = require('os');
 const name = 'codex';
 const DEFAULT_CODEX_HOME = path.join(os.homedir(), '.codex');
 const SESSION_SUBDIR = 'sessions';
+const ARCHIVED_SESSION_SUBDIR = 'archived_sessions';
 const MAX_TOOL_RESULT_PREVIEW = 500;
 
 function getChats() {
-  const sessionsDir = getSessionsDir();
-  if (!fs.existsSync(sessionsDir)) return [];
-
+  const dirs = [getSessionsDir(), getArchivedSessionsDir()];
+  const seen = new Set();
   const chats = [];
-  for (const filePath of walkJsonlFiles(sessionsDir)) {
-    const chat = readChatMetadata(filePath);
-    if (chat) chats.push(chat);
+
+  for (const dir of dirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const filePath of walkJsonlFiles(dir)) {
+      const chat = readChatMetadata(filePath);
+      if (!chat) continue;
+      if (seen.has(chat.composerId)) continue;
+      seen.add(chat.composerId);
+      chats.push(chat);
+    }
   }
+
   return chats;
 }
 
@@ -25,11 +33,18 @@ function getMessages(chat) {
   return parseSessionMessages(filePath);
 }
 
-function getSessionsDir() {
-  const codexHome = process.env.CODEX_HOME && process.env.CODEX_HOME.trim()
+function getCodexHome() {
+  return process.env.CODEX_HOME && process.env.CODEX_HOME.trim()
     ? path.resolve(process.env.CODEX_HOME.trim())
     : DEFAULT_CODEX_HOME;
-  return path.join(codexHome, SESSION_SUBDIR);
+}
+
+function getSessionsDir() {
+  return path.join(getCodexHome(), SESSION_SUBDIR);
+}
+
+function getArchivedSessionsDir() {
+  return path.join(getCodexHome(), ARCHIVED_SESSION_SUBDIR);
 }
 
 function walkJsonlFiles(dir) {
@@ -442,12 +457,7 @@ function safeParseJson(value) {
 // ============================================================
 
 function getCodexAuth() {
-  const authPath = path.join(
-    process.env.CODEX_HOME && process.env.CODEX_HOME.trim()
-      ? path.resolve(process.env.CODEX_HOME.trim())
-      : DEFAULT_CODEX_HOME,
-    'auth.json'
-  );
+  const authPath = path.join(getCodexHome(), 'auth.json');
   try {
     return JSON.parse(fs.readFileSync(authPath, 'utf-8'));
   } catch { return null; }
