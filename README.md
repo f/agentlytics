@@ -56,6 +56,11 @@ Download the native desktop app (no Node.js required):
 
 Built with [Tauri](https://tauri.app) — lightweight, fast, runs entirely on your machine.
 
+> **macOS:** If the app won't open, clear the quarantine flag first:
+> ```bash
+> xattr -cr /Applications/Agentlytics.app
+> ```
+
 ```
 $ npx agentlytics
 

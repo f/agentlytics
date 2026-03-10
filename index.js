@@ -10,6 +10,7 @@ const HOME = os.homedir();
 const PORT = process.env.PORT || 4637;
 const noCache = process.argv.includes('--no-cache');
 const collectOnly = process.argv.includes('--collect');
+const noOpen = process.argv.includes('--no-open');
 
 // ── ASCII banner ─────────────────────────────────────────
 const c1 = chalk.hex('#818cf8'), c2 = chalk.hex('#f472b6'), c3 = chalk.hex('#34d399'), c4 = chalk.hex('#fbbf24');
@@ -174,8 +175,10 @@ const BOT_STYLES = [
     console.log('');
     console.log(chalk.dim('  Press Ctrl+C to stop\n'));
 
-    // Auto-open browser
-    const open = require('open');
-    open(url).catch(() => {});
+    // Auto-open browser (skip when launched by Tauri)
+    if (!noOpen) {
+      const open = require('open');
+      open(url).catch(() => {});
+    }
   });
 })();

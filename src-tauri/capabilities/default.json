@@ -11,8 +11,8 @@
       "allow": [
         {
           "args": true,
-          "name": "binaries/node-backend",
-          "sidecar": true
+          "cmd": "npx",
+          "name": "npx"
         }
       ]
     }

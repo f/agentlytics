@@ -7,17 +7,17 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            // Spawn the Node.js backend as a sidecar
-            let sidecar_command = app
+            // Spawn `npx agentlytics` in the background
+            let command = app
                 .shell()
-                .sidecar("node-backend")
-                .expect("failed to create sidecar command");
+                .command("npx")
+                .args(["agentlytics", "--no-open"]);
 
-            let (mut rx, _child) = sidecar_command
+            let (mut rx, _child) = command
                 .spawn()
-                .expect("Failed to spawn node backend sidecar");
+                .expect("Failed to spawn npx agentlytics");
 
-            // Log sidecar output
+            // Log output
             tauri::async_runtime::spawn(async move {
                 while let Some(event) = rx.recv().await {
                     match event {
