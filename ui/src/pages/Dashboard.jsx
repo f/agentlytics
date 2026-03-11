@@ -163,8 +163,8 @@ export default function Dashboard({ overview }) {
   } : null
 
   const tk = stats?.tokens
-  const totalInputWithCache = tk ? tk.input + tk.cacheRead : 0
-  const cacheHitRate = totalInputWithCache > 0 ? ((tk.cacheRead / totalInputWithCache) * 100).toFixed(1) : 0
+  const totalInputAll = tk ? tk.input + tk.cacheRead + (tk.cacheWrite || 0) : 0
+  const cacheHitRate = totalInputAll > 0 ? ((tk.cacheRead / totalInputAll) * 100).toFixed(1) : 0
   const outputInputRatio = tk && tk.input > 0 ? (tk.output / tk.input).toFixed(2) : 0
   const avgMsgsPerSession = tk && tk.sessions > 0 ? (depthData ? (Object.values(stats.depthBuckets).reduce((s, v, i) => {
     const labels = Object.keys(stats.depthBuckets)
