@@ -36,6 +36,38 @@ function queryDb(sql) {
   }
 }
 
+function extractModelInfo(data) {
+  let modelValue = null;
+  let providerValue = null;
+
+  if (typeof data?.modelID === 'string') {
+    modelValue = data.modelID;
+    providerValue = typeof data.providerID === 'string' ? data.providerID : null;
+  } else if (data?.model && typeof data.model === 'object') {
+    modelValue = typeof data.model.modelID === 'string' ? data.model.modelID : null;
+    providerValue = typeof data.providerID === 'string'
+      ? data.providerID
+      : (typeof data.model.providerID === 'string' ? data.model.providerID : null);
+  } else if (typeof data?.model === 'string') {
+    modelValue = data.model;
+    providerValue = typeof data.providerID === 'string' ? data.providerID : null;
+  }
+
+  return { modelValue, providerValue };
+}
+
+function extractTokenInfo(data) {
+  const tokens = data?.tokens && typeof data.tokens === 'object' ? data.tokens : null;
+  const cache = tokens?.cache && typeof tokens.cache === 'object' ? tokens.cache : null;
+
+  return {
+    inputTokens: tokens?.input,
+    outputTokens: tokens?.output,
+    cacheRead: cache?.read,
+    cacheWrite: cache?.write,
+  };
+}
+
 function getSqliteSessions() {
   return queryDb(
     `SELECT s.id, s.title, s.directory, s.time_created, s.time_updated,
@@ -94,19 +126,18 @@ function getSqliteMessages(sessionId) {
       const content = contentParts.join('\n');
       if (!content) continue;
 
-      let modelValue = null;
-      if (typeof msgData.modelID === 'string') {
-        modelValue = msgData.modelID;
-      } else if (msgData.model && typeof msgData.model === 'object' && msgData.model.modelID) {
-        modelValue = msgData.model.modelID;
-      } else if (typeof msgData.model === 'string') {
-        modelValue = msgData.model;
-      }
+      const { modelValue, providerValue } = extractModelInfo(msgData);
+      const { inputTokens, outputTokens, cacheRead, cacheWrite } = extractTokenInfo(msgData);
 
       result.push({
         role: role === 'user' ? 'user' : role === 'assistant' ? 'assistant' : role,
         content,
         _model: modelValue,
+        _provider: providerValue,
+        _inputTokens: inputTokens,
+        _outputTokens: outputTokens,
+        _cacheRead: cacheRead,
+        _cacheWrite: cacheWrite,
       });
     }
 
@@ -165,12 +196,19 @@ function getMessagesForSession(sessionId) {
   let files;
   try { files = fs.readdirSync(sessionMsgDir).filter(f => f.startsWith('msg_') && f.endsWith('.json')); } catch { return []; }
 
-  const messages = [];
+  const rawMsgs = [];
   for (const file of files) {
     const msgPath = path.join(sessionMsgDir, file);
     const msg = readJson(msgPath);
     if (!msg || !msg.id) continue;
+    rawMsgs.push(msg);
+  }
 
+  // Sort by creation time before building output
+  rawMsgs.sort((a, b) => (a.time?.created || 0) - (b.time?.created || 0));
+
+  const messages = [];
+  for (const msg of rawMsgs) {
     // Get parts for this message
     const msgPartDir = path.join(PART_DIR, msg.id);
     const parts = [];
@@ -213,35 +251,24 @@ function getMessagesForSession(sessionId) {
 
     const content = contentParts.join('\n');
     if (content) {
-      // Extract model value - handle both string and object formats
-      let modelValue = null;
-      if (typeof msg.modelID === 'string') {
-        modelValue = msg.modelID;
-      } else if (msg.model && typeof msg.model === 'object' && msg.model.modelID) {
-        modelValue = msg.model.modelID;
-      } else if (typeof msg.model === 'string') {
-        modelValue = msg.model;
-      }
+      const { modelValue, providerValue } = extractModelInfo(msg);
+      const { inputTokens, outputTokens, cacheRead, cacheWrite } = extractTokenInfo(msg);
 
       messages.push({
         role: msg.role || 'assistant',
         content,
         _model: modelValue,
-        _inputTokens: msg.tokens?.input,
-        _outputTokens: msg.tokens?.output,
-        _cacheRead: msg.tokens?.cache?.read,
-        _cacheWrite: msg.tokens?.cache?.write,
+        _provider: providerValue,
+        _inputTokens: inputTokens,
+        _outputTokens: outputTokens,
+        _cacheRead: cacheRead,
+        _cacheWrite: cacheWrite,
         _finish: msg.finish,
       });
     }
   }
 
-  // Sort by creation time
-  return messages.sort((a, b) => {
-    const aTime = a.time?.created || 0;
-    const bTime = b.time?.created || 0;
-    return aTime - bTime;
-  });
+  return messages;
 }
 
 // ============================================================
