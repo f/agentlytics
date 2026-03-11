@@ -165,7 +165,7 @@ export default function Dashboard({ overview }) {
   const tk = stats?.tokens
   const totalInputAll = tk ? tk.input + tk.cacheRead + (tk.cacheWrite || 0) : 0
   const cacheHitRate = totalInputAll > 0 ? ((tk.cacheRead / totalInputAll) * 100).toFixed(1) : 0
-  const outputInputRatio = tk && tk.input > 0 ? (tk.output / tk.input).toFixed(2) : 0
+  const outputInputRatio = totalInputAll > 0 ? (tk.output / totalInputAll).toFixed(3) : 0
   const avgMsgsPerSession = tk && tk.sessions > 0 ? (depthData ? (Object.values(stats.depthBuckets).reduce((s, v, i) => {
     const labels = Object.keys(stats.depthBuckets)
     const midpoints = [1, 3.5, 8, 15.5, 35.5, 75.5, 150]
