@@ -226,7 +226,7 @@ export default function DeepAnalysis({ overview }) {
   // Computed insights
   const insights = useMemo(() => {
     if (!data) return null
-    const totalTok = data.totalInputTokens + data.totalOutputTokens
+    const totalTok = data.totalInputTokens + data.totalOutputTokens + data.totalCacheRead + data.totalCacheWrite
     const msgsPerSession = data.analyzedChats > 0 ? (data.totalMessages / data.analyzedChats).toFixed(1) : 0
     const toolsPerSession = data.analyzedChats > 0 ? (data.totalToolCalls / data.analyzedChats).toFixed(1) : 0
     const tokPerMsg = data.totalMessages > 0 ? Math.round(totalTok / data.totalMessages) : 0
