@@ -1,6 +1,6 @@
 {
   "name": "agentlytics",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Comprehensive analytics dashboard for AI coding agents — Cursor, Windsurf, Claude Code, VS Code Copilot, Zed, Antigravity, OpenCode, Command Code",
   "main": "index.js",
   "bin": {
