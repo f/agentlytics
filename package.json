@@ -48,6 +48,9 @@
   ],
   "author": "fkadev",
   "license": "ISC",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/f/agentlytics"

@@ -6,6 +6,27 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 
+// ── Node.js version check ─────────────────────────────────
+const nodeVersion = process.versions.node;
+const [nodeMajor, nodeMinor] = nodeVersion.split('.').map(Number);
+const isNodeSupported =
+  (nodeMajor === 20 && nodeMinor >= 19) ||
+  (nodeMajor === 22 && nodeMinor >= 12) ||
+  nodeMajor === 23 || nodeMajor === 24 || nodeMajor >= 25;
+
+if (!isNodeSupported) {
+  console.error('');
+  console.error(`  \x1b[31m✗ Unsupported Node.js version: v${nodeVersion}\x1b[0m`);
+  console.error('');
+  console.error(`  \x1b[1mAgentlytics requires Node.js 20.19+ or 22.12+\x1b[0m`);
+  console.error(`  \x1b[2mYour current version: v${nodeVersion}\x1b[0m`);
+  console.error('');
+  console.error(`  \x1b[2mTo upgrade, visit: https://nodejs.org\x1b[0m`);
+  console.error(`  \x1b[2mOr use a version manager: nvm install 22\x1b[0m`);
+  console.error('');
+  process.exit(1);
+}
+
 const HOME = os.homedir();
 const PORT = process.env.PORT || 4637;
 const RELAY_PORT = process.env.RELAY_PORT || 4638;
