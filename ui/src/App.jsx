@@ -3,6 +3,7 @@ import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import { Activity, BarChart3, GitCompare, MessageSquare, FolderOpen, DollarSign, CreditCard, Sun, Moon, RefreshCw, AlertTriangle, Github, Terminal, Database, Users, Plug, Copy, Check, Settings as SettingsIcon, Package, ChevronDown } from 'lucide-react'
 import { fetchOverview, refetchAgents, fetchMode, fetchRelayConfig, getAuthToken, setOnAuthFailure } from './lib/api'
 import { useTheme } from './lib/theme'
+import { useLive } from './hooks/useLive'
 import AnimatedLogo from './components/AnimatedLogo'
 import AnimatedLoader from './components/AnimatedLoader'
 import LoginScreen from './components/LoginScreen'
@@ -70,7 +71,7 @@ function NavDropdown({ icon: Icon, label, items }) {
 export default function App() {
   const [overview, setOverview] = useState(null)
   const [refetchState, setRefetchState] = useState(null) // null | { scanned, total }
-  const [live, setLive] = useState(false)
+  const { live, toggle: toggleLive } = useLive()
   const [mode, setMode] = useState(null) // 'local' | 'relay'
   const [needsAuth, setNeedsAuth] = useState(false)
   const [authed, setAuthed] = useState(!!getAuthToken())
@@ -187,7 +188,7 @@ export default function App() {
           {!isRelay && (
             <>
               <button
-                onClick={() => setLive(!live)}
+                onClick={toggleLive}
                 className="flex items-center gap-1.5 px-2 py-0.5 text-[11px] transition"
                 style={{
                   color: live ? '#22c55e' : 'var(--c-text3)',
