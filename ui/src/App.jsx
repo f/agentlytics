@@ -105,25 +105,29 @@ export default function App() {
     if (mode === 'local') refreshOverview()
   }, [mode])
 
-  // Live mode: refetch overview every 60s
+  const rescanAndRefresh = useCallback(async (onProgress) => {
+    await refetchAgents(onProgress)
+    const data = await fetchOverview()
+    setOverview(data)
+  }, [])
+
+  // Live mode: rescan & refresh every 60s
   useEffect(() => {
     if (live && mode === 'local') {
       liveRef.current = setInterval(() => {
-        refreshOverview()
+        rescanAndRefresh().catch(() => {})
       }, 60000)
     } else {
       if (liveRef.current) clearInterval(liveRef.current)
       liveRef.current = null
     }
     return () => { if (liveRef.current) clearInterval(liveRef.current) }
-  }, [live, refreshOverview])
+  }, [live, rescanAndRefresh])
 
   const handleRefetch = async () => {
     setRefetchState({ scanned: 0, total: 0 })
     try {
-      await refetchAgents((p) => setRefetchState({ scanned: p.scanned, total: p.total }))
-      const data = await fetchOverview()
-      setOverview(data)
+      await rescanAndRefresh((p) => setRefetchState({ scanned: p.scanned, total: p.total }))
     } catch (e) { console.error(e) }
     setRefetchState(null)
   }
