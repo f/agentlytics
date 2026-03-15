@@ -17,14 +17,11 @@ Editor files/APIs → editors/*.js → cache.js (SQLite) → server.js (REST) �
 git clone https://github.com/f/agentlytics.git
 cd agentlytics && npm install
 
-# Frontend dev server (port 5173, proxies API to backend)
+# Starts both frontend (port 5173) and backend (port 4637)
 cd ui && npm install && npm run dev
-
-# Backend (port 4637) — in another terminal
-npm start
 ```
 
-The Vite dev server proxies `/api/*` requests to the backend via `vite.config.js`.
+`npm run dev` from the `ui/` directory starts both the Vite dev server and the backend concurrently. The Vite dev server proxies `/api/*` requests to the backend via `vite.config.js`. Ctrl+C stops both processes.
 
 ### CLI Options
 
