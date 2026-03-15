@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 4637;
 const RELAY_PORT = process.env.RELAY_PORT || 4638;
 const noCache = process.argv.includes('--no-cache');
 const collectOnly = process.argv.includes('--collect');
+const isUiDev = process.argv.includes('--ui-dev');
 const isRelay = process.argv.includes('--relay');
 const joinIndex = process.argv.indexOf('--join');
 const isJoin = joinIndex !== -1;
@@ -135,7 +136,7 @@ console.log('');
 const publicIndex = path.join(__dirname, 'public', 'index.html');
 const uiDir = path.join(__dirname, 'ui');
 
-if (!collectOnly && !fs.existsSync(publicIndex) && fs.existsSync(uiDir)) {
+if (!collectOnly && !isUiDev && !fs.existsSync(publicIndex) && fs.existsSync(uiDir)) {
   console.log(chalk.cyan('  ⟳ Building dashboard UI (first run)...'));
   try {
     const uiModules = path.join(uiDir, 'node_modules');
@@ -152,7 +153,7 @@ if (!collectOnly && !fs.existsSync(publicIndex) && fs.existsSync(uiDir)) {
   console.log('');
 }
 
-if (!collectOnly && !fs.existsSync(publicIndex)) {
+if (!collectOnly && !isUiDev && !fs.existsSync(publicIndex)) {
   console.error(chalk.red('  ✗ No built UI found at public/index.html'));
   console.error(chalk.dim('    Run: cd ui && npm install && npm run build'));
   process.exit(1);
@@ -365,12 +366,12 @@ const BOT_STYLES = [
     }
 
     app.listen(port, '0.0.0.0', () => {
+      if (isUiDev) return;
       const url = `http://localhost:${port}`;
       console.log(chalk.green(`  ✓ Dashboard ready at ${chalk.bold.white(url)}`));
       console.log('');
       console.log(chalk.dim('  Press Ctrl+C to stop\n'));
 
-      // Auto-open browser
       const open = require('open');
       open(url).catch(() => {});
     });
