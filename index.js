@@ -196,6 +196,28 @@ if (!collectOnly && !isUiDev && !fs.existsSync(publicIndex)) {
   process.exit(1);
 }
 
+// ── Ensure better-sqlite3 native bindings exist ─────────────
+try {
+  require('better-sqlite3');
+} catch (e) {
+  if (e.message && e.message.includes('Could not locate the bindings file')) {
+    console.log(chalk.cyan('  ⟳ Rebuilding native SQLite module...'));
+    try {
+      const bsqlDir = path.dirname(require.resolve('better-sqlite3/package.json'));
+      execSync('npx --yes prebuild-install -r napi || npx --yes node-gyp rebuild --release', {
+        cwd: bsqlDir, stdio: 'pipe', timeout: 120000,
+      });
+      console.log(chalk.green('  ✓ Native module rebuilt'));
+    } catch (rebuildErr) {
+      console.error(chalk.red('  ✗ Failed to rebuild better-sqlite3:'), rebuildErr.message);
+      console.error(chalk.dim('    Try: npm install better-sqlite3 --build-from-source'));
+      process.exit(1);
+    }
+  } else {
+    throw e;
+  }
+}
+
 const cache = require('./cache');
 
 // Wipe cache if --no-cache flag is passed
