@@ -201,16 +201,30 @@ try {
   require('better-sqlite3');
 } catch (e) {
   if (e.message && e.message.includes('Could not locate the bindings file')) {
-    console.log(chalk.cyan('  ⟳ Rebuilding native SQLite module...'));
+    console.log(chalk.cyan('  ⟳ Native SQLite module not found, downloading prebuilt binary...'));
+    const bsqlDir = path.dirname(require.resolve('better-sqlite3/package.json'));
+    let rebuilt = false;
+    // 1) Use prebuild-install (dep of better-sqlite3) to download a prebuilt binary
     try {
-      const bsqlDir = path.dirname(require.resolve('better-sqlite3/package.json'));
-      execSync('npx --yes prebuild-install -r napi || npx --yes node-gyp rebuild --release', {
-        cwd: bsqlDir, stdio: 'pipe', timeout: 120000,
-      });
-      console.log(chalk.green('  ✓ Native module rebuilt'));
-    } catch (rebuildErr) {
-      console.error(chalk.red('  ✗ Failed to rebuild better-sqlite3:'), rebuildErr.message);
-      console.error(chalk.dim('    Try: npm install better-sqlite3 --build-from-source'));
+      const prebuildBin = require.resolve('prebuild-install/bin.js');
+      execSync(`node "${prebuildBin}" -r napi`, { cwd: bsqlDir, stdio: 'pipe', timeout: 60000 });
+      rebuilt = true;
+    } catch {}
+    // 2) Fallback: compile from source via node-gyp
+    if (!rebuilt) {
+      console.log(chalk.cyan('  ⟳ Prebuilt unavailable, compiling from source...'));
+      try {
+        execSync('npx --yes node-gyp rebuild --release', { cwd: bsqlDir, stdio: 'pipe', timeout: 120000 });
+        rebuilt = true;
+      } catch {}
+    }
+    if (rebuilt) {
+      console.log(chalk.green('  ✓ Native module ready'));
+      // Clear require cache so the freshly built binding is picked up
+      delete require.cache[require.resolve('better-sqlite3')];
+    } else {
+      console.error(chalk.red('  ✗ Failed to build better-sqlite3.'));
+      console.error(chalk.dim('    Ensure build tools are installed (python3, make, g++).'));
       process.exit(1);
     }
   } else {
