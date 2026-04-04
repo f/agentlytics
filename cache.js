@@ -7,7 +7,7 @@ const { calculateCost, getModelPricing, normalizeModelName } = require('./pricin
 
 const CACHE_DIR = path.join(os.homedir(), '.agentlytics');
 const CACHE_DB = path.join(CACHE_DIR, 'cache.db');
-const SCHEMA_VERSION = 6; // bump this when schema changes to auto-revalidate
+const SCHEMA_VERSION = 7; // bump this when schema changes to auto-revalidate
 
 /**
  * Normalize a folder path for consistent storage/lookup.
@@ -154,6 +154,38 @@ function initDb() {
     CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id);
     CREATE INDEX IF NOT EXISTS idx_tool_calls_name ON tool_calls(tool_name);
     CREATE INDEX IF NOT EXISTS idx_tool_calls_chat ON tool_calls(chat_id);
+
+    CREATE TABLE IF NOT EXISTS gsd_projects (
+      folder TEXT PRIMARY KEY,
+      name TEXT,
+      description TEXT,
+      milestone TEXT,
+      total_phases INTEGER DEFAULT 0,
+      completed_phases INTEGER DEFAULT 0,
+      active_phase TEXT,
+      todos INTEGER DEFAULT 0,
+      backlog INTEGER DEFAULT 0,
+      notes INTEGER DEFAULT 0,
+      last_modified INTEGER,
+      scanned_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS gsd_phases (
+      id TEXT PRIMARY KEY,
+      folder TEXT NOT NULL,
+      phase_number INTEGER,
+      phase_name TEXT,
+      status TEXT,
+      total_tasks INTEGER DEFAULT 0,
+      completed_tasks INTEGER DEFAULT 0,
+      has_plan INTEGER DEFAULT 0,
+      has_research INTEGER DEFAULT 0,
+      has_verification INTEGER DEFAULT 0,
+      last_modified INTEGER,
+      FOREIGN KEY (folder) REFERENCES gsd_projects(folder)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_gsd_phases_folder ON gsd_phases(folder);
   `);
 
   // Store schema version so future runs can detect mismatches
@@ -357,6 +389,9 @@ function scanAll(onProgress, opts = {}) {
   // Store scan metadata
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run('last_scan', Date.now().toString());
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run('total_chats', total.toString());
+
+  // GSD scan
+  cacheGSDProjects();
 
   return { total, analyzed, skipped };
 }
@@ -839,6 +874,9 @@ async function scanAllAsync(onProgress, opts = {}) {
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run('last_scan', Date.now().toString());
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run('total_chats', total.toString());
 
+  // GSD scan
+  cacheGSDProjects();
+
   return { total, analyzed, skipped };
 }
 
@@ -1300,6 +1338,156 @@ function getCostAnalytics(opts = {}) {
 
 function getDb() { return db; }
 
+// ============================================================
+// GSD cache functions
+// ============================================================
+
+const gsd = require('./editors/gsd');
+
+function cacheGSDProjects() {
+  // Get all unique known folders from chats table
+  const rows = db.prepare('SELECT DISTINCT folder FROM chats WHERE folder IS NOT NULL').all();
+  const knownFolders = rows.map(r => r.folder);
+
+  const projects = gsd.getGSDProjects(knownFolders);
+
+  const insProject = db.prepare(`
+    INSERT OR REPLACE INTO gsd_projects
+      (folder, name, description, milestone, total_phases, completed_phases, active_phase, todos, backlog, notes, last_modified, scanned_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const delPhases = db.prepare('DELETE FROM gsd_phases WHERE folder = ?');
+  const insPhase = db.prepare(`
+    INSERT OR REPLACE INTO gsd_phases
+      (id, folder, phase_number, phase_name, status, total_tasks, completed_tasks, has_plan, has_research, has_verification, last_modified)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const tx = db.transaction(() => {
+    for (const p of projects) {
+      insProject.run(
+        p.folder, p.name, p.description, p.milestone,
+        p.totalPhases, p.completedPhases, p.activePhase,
+        p.todos, p.backlog, p.notes,
+        p.lastModified, Date.now()
+      );
+      delPhases.run(p.folder);
+      const phases = gsd.getGSDPhases(p.folder);
+      for (const ph of phases) {
+        const id = `${p.folder}::${ph.phaseDir}`;
+        insPhase.run(
+          id, p.folder, ph.number, ph.name, ph.status,
+          ph.tasks.total, ph.tasks.completed,
+          ph.hasPlan ? 1 : 0,
+          ph.hasResearch ? 1 : 0,
+          ph.hasVerification ? 1 : 0,
+          ph.lastModified
+        );
+      }
+    }
+  });
+  tx();
+}
+
+function getCachedGSDProjects() {
+  const projects = db.prepare('SELECT * FROM gsd_projects ORDER BY last_modified DESC').all();
+  for (const p of projects) {
+    try {
+      const phases = getGSDPhaseTokens(p.folder);
+      p.total_cost = phases.reduce((s, r) => s + (r.cost || 0), 0);
+    } catch {
+      p.total_cost = 0;
+    }
+  }
+  return projects;
+}
+
+function getCachedGSDPhases(folder) {
+  return db.prepare('SELECT * FROM gsd_phases WHERE folder = ? ORDER BY phase_number ASC').all(folder);
+}
+
+function getGSDPhaseTokens(folder) {
+  const phases = db.prepare(
+    'SELECT id, phase_number, phase_name, status, last_modified FROM gsd_phases WHERE folder = ? ORDER BY phase_number ASC'
+  ).all(folder);
+
+  if (phases.length === 0) return [];
+
+  // Sort by last_modified to build sequential non-overlapping time windows.
+  // Phases with no last_modified are placed at the end.
+  const byTime = [...phases]
+    .filter(p => p.last_modified)
+    .sort((a, b) => a.last_modified - b.last_modified);
+
+  const windowMap = new Map();
+  for (let i = 0; i < byTime.length; i++) {
+    const start = i === 0 ? 0 : byTime[i - 1].last_modified;
+    const end = i === byTime.length - 1 ? Date.now() : byTime[i].last_modified;
+    windowMap.set(byTime[i].id, { start, end });
+  }
+
+  const stmt = db.prepare(`
+    SELECT cs.total_input_tokens, cs.total_output_tokens,
+           cs.total_cache_read, cs.total_cache_write, cs.models
+    FROM chats c JOIN chat_stats cs ON cs.chat_id = c.id
+    WHERE c.folder = ? AND COALESCE(c.last_updated_at, c.created_at) BETWEEN ? AND ?
+  `);
+
+  return phases.map(ph => {
+    const win = windowMap.get(ph.id);
+    let totalInput = 0, totalOutput = 0, totalCacheRead = 0, totalCacheWrite = 0;
+    let sessionCount = 0;
+    const modelFreq = {};
+
+    if (win) {
+      const rows = stmt.all(folder, win.start, win.end);
+      for (const row of rows) {
+        totalInput += row.total_input_tokens || 0;
+        totalOutput += row.total_output_tokens || 0;
+        totalCacheRead += row.total_cache_read || 0;
+        totalCacheWrite += row.total_cache_write || 0;
+        sessionCount++;
+        try {
+          const models = JSON.parse(row.models || '[]');
+          for (const m of models) {
+            const key = typeof m === 'string' ? m : (m && m.model);
+            if (key) modelFreq[key] = (modelFreq[key] || 0) + 1;
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    const dominantModel = Object.entries(modelFreq).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    const cost = dominantModel
+      ? (calculateCost(dominantModel, totalInput, totalOutput, totalCacheRead, totalCacheWrite) || 0)
+      : 0;
+    const totalTokens = totalInput + totalOutput;
+
+    return {
+      id: ph.id,
+      phase_number: ph.phase_number,
+      phase_name: ph.phase_name,
+      status: ph.status,
+      total_tokens: totalTokens,
+      cost,
+      session_count: sessionCount,
+    };
+  });
+}
+
+function getCachedGSDOverview() {
+  const projects = getCachedGSDProjects();
+  const totalProjects = projects.length;
+  const totalPhases = projects.reduce((s, p) => s + p.total_phases, 0);
+  const completedPhases = projects.reduce((s, p) => s + p.completed_phases, 0);
+  const activePhases = projects
+    .filter(p => p.active_phase)
+    .map(p => ({ folder: p.folder, name: p.name, activePhase: p.active_phase }));
+  const executingPhases = db.prepare("SELECT COUNT(*) as c FROM gsd_phases WHERE status = 'executing'").get().c;
+  const plannedPhases = db.prepare("SELECT COUNT(*) as c FROM gsd_phases WHERE status = 'planned'").get().c;
+  return { totalProjects, totalPhases, completedPhases, activePhases, executingPhases, plannedPhases };
+}
+
 module.exports = {
   initDb,
   scanAll,
@@ -1317,4 +1505,9 @@ module.exports = {
   getCostBreakdown,
   getCostAnalytics,
   getDb,
+  cacheGSDProjects,
+  getCachedGSDProjects,
+  getCachedGSDPhases,
+  getCachedGSDOverview,
+  getGSDPhaseTokens,
 };

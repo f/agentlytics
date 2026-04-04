@@ -727,6 +727,108 @@ app.get('/api/all-projects', (req, res) => {
   }
 });
 
+// ============================================================
+// GSD endpoints
+// ============================================================
+
+app.get('/api/gsd/projects', (req, res) => {
+  try {
+    res.json(cache.getCachedGSDProjects());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/gsd/phases', (req, res) => {
+  try {
+    const { folder } = req.query;
+    if (!folder) return res.status(400).json({ error: 'folder query param required' });
+    res.json(cache.getCachedGSDPhases(folder));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/gsd/plan', (req, res) => {
+  try {
+    const { folder, phase } = req.query;
+    if (!folder || !phase) return res.status(400).json({ error: 'folder and phase query params required' });
+    const gsd = require('./editors/gsd');
+    const detail = gsd.getGSDPlanDetail(folder, phase);
+    if (!detail) return res.status(404).json({ error: 'Plan not found' });
+    res.json(detail);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/gsd/overview', (req, res) => {
+  try {
+    res.json(cache.getCachedGSDOverview());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/gsd/config', (req, res) => {
+  try {
+    const { folder } = req.query;
+    if (!folder) return res.status(400).json({ error: 'folder query param required' });
+    const configPath = require('path').join(folder, '.planning', 'config.json');
+    if (!fs.existsSync(configPath)) return res.json(null);
+    res.json(JSON.parse(fs.readFileSync(configPath, 'utf-8')));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/gsd/phase-tokens', (req, res) => {
+  try {
+    const { folder } = req.query;
+    if (!folder) return res.status(400).json({ error: 'folder query param required' });
+    res.json(cache.getGSDPhaseTokens(folder));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Generic .planning file reader
+// type: 'state' (project-level STATE.md) | 'research' | 'verification' | 'summary' (phase-level, requires phase param)
+app.get('/api/gsd/file', (req, res) => {
+  try {
+    const { folder, phase: phaseDir, type } = req.query;
+    if (!folder || !type) return res.status(400).json({ error: 'folder and type required' });
+
+    const planningDir = path.join(folder, '.planning');
+    let content = null;
+
+    if (type === 'state') {
+      const filePath = path.join(planningDir, 'STATE.md');
+      if (fs.existsSync(filePath)) content = fs.readFileSync(filePath, 'utf-8');
+    } else if (phaseDir) {
+      const phaseFullDir = path.join(planningDir, 'phases', phaseDir);
+      const pattern = type === 'research' ? /RESEARCH\.md$/i
+        : type === 'verification' ? /VERIFICATION\.md$/i
+        : type === 'summary' ? /SUMMARY\.md$/i
+        : null;
+      if (pattern && fs.existsSync(phaseFullDir)) {
+        const files = fs.readdirSync(phaseFullDir).filter(f => pattern.test(f)).sort();
+        if (files.length > 0) {
+          const sections = files.map(f => {
+            const c = fs.readFileSync(path.join(phaseFullDir, f), 'utf-8');
+            return files.length > 1 ? `## ${f}\n\n${c}` : c;
+          });
+          content = sections.join('\n\n---\n\n');
+        }
+      }
+    }
+
+    res.json({ content });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // SPA fallback
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

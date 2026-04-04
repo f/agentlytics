@@ -234,6 +234,49 @@ export async function fetchMCPs() {
   return res.json();
 }
 
+// ── GSD API ──
+
+export async function fetchGSDProjects() {
+  const res = await fetch(`${BASE}/api/gsd/projects`);
+  return res.json();
+}
+
+export async function fetchGSDPhases(folder) {
+  const q = new URLSearchParams({ folder });
+  const res = await fetch(`${BASE}/api/gsd/phases?${q}`);
+  return res.json();
+}
+
+export async function fetchGSDPlan(folder, phase) {
+  const q = new URLSearchParams({ folder, phase });
+  const res = await fetch(`${BASE}/api/gsd/plan?${q}`);
+  return res.json();
+}
+
+export async function fetchGSDOverview() {
+  const res = await fetch(`${BASE}/api/gsd/overview`);
+  return res.json();
+}
+
+export async function fetchGSDConfig(folder) {
+  const q = new URLSearchParams({ folder });
+  const res = await fetch(`${BASE}/api/gsd/config?${q}`);
+  return res.json();
+}
+
+export async function fetchGSDPhaseTokens(folder) {
+  const q = new URLSearchParams({ folder });
+  const res = await fetch(`${BASE}/api/gsd/phase-tokens?${q}`);
+  return res.json();
+}
+
+export async function fetchGSDFile(folder, type, phaseDir) {
+  const q = new URLSearchParams({ folder, type });
+  if (phaseDir) q.set('phase', phaseDir);
+  const res = await fetch(`${BASE}/api/gsd/file?${q}`);
+  return res.json();
+}
+
 // ── Relay API ──
 
 export async function fetchMode() {

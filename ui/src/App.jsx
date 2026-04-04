@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
-import { Activity, BarChart3, GitCompare, MessageSquare, FolderOpen, DollarSign, CreditCard, Sun, Moon, RefreshCw, AlertTriangle, Github, Terminal, Database, Users, Plug, Copy, Check, Settings as SettingsIcon, Package, ChevronDown } from 'lucide-react'
+import { Activity, BarChart3, GitCompare, MessageSquare, FolderOpen, DollarSign, CreditCard, Sun, Moon, RefreshCw, AlertTriangle, Github, Terminal, Database, Users, Plug, Copy, Check, Settings as SettingsIcon, Package, ChevronDown, Target } from 'lucide-react'
 import { fetchOverview, refetchAgents, fetchMode, fetchRelayConfig, getAuthToken, setOnAuthFailure } from './lib/api'
 import { useTheme } from './lib/theme'
 import { useLive } from './hooks/useLive'
@@ -21,6 +21,7 @@ import Subscriptions from './pages/Subscriptions'
 import MCPs from './pages/MCPs'
 import RelayDashboard from './pages/RelayDashboard'
 import RelayUserDetail from './pages/RelayUserDetail'
+import GSD from './pages/GSD'
 
 function NavDropdown({ icon: Icon, label, items }) {
   const [open, setOpen] = useState(false)
@@ -154,6 +155,7 @@ export default function App() {
       { to: '/compare', icon: GitCompare, label: 'Compare' },
     ]},
     { to: '/artifacts', icon: Package, label: 'Artifacts' },
+    { to: '/gsd', icon: Target, label: 'GSD' },
     { to: '/mcps', icon: Plug, label: 'MCPs' },
     { to: '/sql', icon: Database, label: 'SQL' },
   ]
@@ -284,6 +286,7 @@ export default function App() {
             <Route path="/artifacts" element={<Artifacts />} />
             <Route path="/mcps" element={<MCPs />} />
             <Route path="/sql" element={<SqlViewer />} />
+            <Route path="/gsd" element={<GSD />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         )}
