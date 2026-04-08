@@ -16,6 +16,8 @@ export const EDITOR_COLORS = {
   'commandcode': '#e11d48',
   'goose': '#333333',
   'kiro': '#ff9900',
+  'cline-cli': '#00d4ff',
+  'kilocode-cli': '#8b5cf6',
 };
 
 export const EDITOR_LABELS = {
@@ -36,6 +38,8 @@ export const EDITOR_LABELS = {
   'commandcode': 'Command Code',
   'goose': 'Goose',
   'kiro': 'Kiro',
+  'cline-cli': 'Cline CLI',
+  'kilocode-cli': 'Kilo Code CLI',
 };
 
 export function editorColor(src) {

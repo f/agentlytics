@@ -57,7 +57,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^12.8.0",
     "chalk": "^4.1.2",
     "express": "^4.22.1",
     "log-update": "^4.0.0",
