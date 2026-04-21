@@ -6,12 +6,12 @@
 
 <p align="center">
   <strong>Your Cursor, Windsurf, Claude Code sessions — analyzed, unified, tracked.</strong><br>
-  <sub>One command to turn scattered AI conversations from <b>16 editors</b> into a unified analytics dashboard.<br>Sessions, costs, models, tools — finally in one place. 100% local.</sub>
+  <sub>One command to turn scattered AI conversations from <b>17 editors</b> into a unified analytics dashboard.<br>Sessions, costs, models, tools — finally in one place. 100% local.</sub>
 </p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/agentlytics"><img src="https://img.shields.io/npm/v/agentlytics?color=6366f1&label=npm" alt="npm"></a>
-  <a href="#supported-editors"><img src="https://img.shields.io/badge/editors-16-818cf8" alt="editors"></a>
+  <a href="#supported-editors"><img src="https://img.shields.io/badge/editors-17-818cf8" alt="editors"></a>
   <a href="#license"><img src="https://img.shields.io/badge/license-MIT-green" alt="license"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%E2%89%A520.19%20%7C%20%E2%89%A522.12-brightgreen" alt="node"></a>
   <a href="https://deno.land"><img src="https://img.shields.io/badge/deno-%E2%89%A52.0-000?logo=deno" alt="deno"></a>
@@ -154,6 +154,7 @@ npx agentlytics --collect
 | **Command Code** | ✅ | ✅ | ❌ | ❌ |
 | **Goose** | ✅ | ✅ | ✅ | ❌ |
 | **Kiro** | ✅ | ✅ | ✅ | ❌ |
+| **Codebuff** | ✅ | ✅ | ⚠️ | ⚠️ |
 
 > Windsurf, Windsurf Next, and Antigravity must be running during scan.
 
