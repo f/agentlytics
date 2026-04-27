@@ -16,6 +16,7 @@ export const EDITOR_COLORS = {
   'commandcode': '#e11d48',
   'goose': '#333333',
   'kiro': '#ff9900',
+  'codebuff': '#44ff00',
 };
 
 export const EDITOR_LABELS = {
@@ -36,6 +37,7 @@ export const EDITOR_LABELS = {
   'commandcode': 'Command Code',
   'goose': 'Goose',
   'kiro': 'Kiro',
+  'codebuff': 'Codebuff',
 };
 
 export function editorColor(src) {

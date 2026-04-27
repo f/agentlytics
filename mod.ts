@@ -829,6 +829,85 @@ function formatDate(ts: number | null): string {
   return d.toISOString().split("T")[0];
 }
 
+// ── Editor: Codebuff ────────────────────────────────────────
+
+function scanCodebuff(): EditorResult {
+  const result: EditorResult = { name: "codebuff", label: "Codebuff", detected: false, sessions: [] };
+  const variants = ["manicode", "manicode-dev", "manicode-staging"];
+
+  for (const variant of variants) {
+    const projectsDir = join(HOME, ".config", variant, "projects");
+    if (!existsSync(projectsDir)) continue;
+    result.detected = true;
+    const variantPrefix = variant === "manicode" ? "" : `${variant}::`;
+
+    for (const projectBase of readDirNames(projectsDir)) {
+      const projectDir = join(projectsDir, projectBase);
+      if (!isDirectory(projectDir)) continue;
+
+      const chatsDir = join(projectDir, "chats");
+      if (!existsSync(chatsDir)) continue;
+
+      for (const chatId of readDirNames(chatsDir)) {
+        const chatDir = join(chatsDir, chatId);
+        if (!isDirectory(chatDir)) continue;
+
+        const messagesPath = join(chatDir, "chat-messages.json");
+        if (!existsSync(messagesPath)) continue;
+
+        let messages: any[] = [];
+        try {
+          const parsedMessages = JSON.parse(readTextSync(messagesPath));
+          if (Array.isArray(parsedMessages)) messages = parsedMessages;
+        } catch { /* skip */ }
+        if (messages.length === 0) continue;
+
+        let firstUser: string | null = null;
+        for (const m of messages) {
+          if (m && m.variant === "user" && typeof m.content === "string") {
+            firstUser = m.content.substring(0, 120);
+            break;
+          }
+        }
+
+        // Try to recover the real cwd from run-state.json
+        let folder: string | null = null;
+        const runStatePath = join(chatDir, "run-state.json");
+        if (existsSync(runStatePath)) {
+          try {
+            const rs = JSON.parse(readTextSync(runStatePath));
+            folder = rs?.sessionState?.projectContext?.cwd
+              || rs?.sessionState?.fileContext?.cwd
+              || rs?.sessionState?.cwd
+              || rs?.cwd
+              || null;
+          } catch { /* skip */ }
+        }
+
+        // chatId is an ISO timestamp with ':' replaced by '-'; reverse it.
+        let createdAt: number | null = null;
+        const isoFixed = chatId.replace(/(\d{4}-\d{2}-\d{2}T\d{2})-(\d{2})-(\d{2})/, "$1:$2:$3");
+        const parsedTs = Date.parse(isoFixed);
+        if (Number.isFinite(parsedTs)) createdAt = parsedTs;
+
+        result.sessions.push({
+          source: "codebuff",
+          composerId: `${variantPrefix}${projectBase}::${chatId}`,
+          name: firstUser,
+          createdAt,
+          lastUpdatedAt: fileMtime(chatDir),
+          mode: "codebuff",
+          folder,
+          bubbleCount: messages.length,
+          messageCount: messages.length,
+        });
+      }
+    }
+  }
+
+  return result;
+}
+
 function formatRelative(ts: number | null): string {
   if (!ts) return "";
   const diff = Date.now() - ts;
@@ -888,6 +967,7 @@ ${bold("Full version:")}
   allResults.push(scanOpenCode());
   allResults.push(...scanWindsurf());
   allResults.push(scanZed());
+  allResults.push(scanCodebuff());
 
   // Gather all sessions
   const allSessions = allResults.flatMap((r) => r.sessions);
