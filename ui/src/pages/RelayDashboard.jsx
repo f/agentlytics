@@ -8,7 +8,7 @@ import EditorIcon from '../components/EditorIcon'
 import SectionTitle from '../components/SectionTitle'
 import ChatSidebar from '../components/ChatSidebar'
 import LiveFeed from '../components/LiveFeed'
-import { editorColor, editorLabel, formatNumber, formatDate } from '../lib/constants'
+import { editorColor, editorLabel, formatNumber, formatCost, formatDate } from '../lib/constants'
 import { fetchRelayTeamStats, fetchRelaySearch, fetchRelaySession, mergeRelayUsers } from '../lib/api'
 import AnimatedLoader from '../components/AnimatedLoader'
 import PageHeader from '../components/PageHeader'
@@ -331,6 +331,7 @@ export default function RelayDashboard() {
           <KpiCard label="projects" value={stats.totalProjects} />
           <KpiCard label="messages" value={formatNumber(stats.totalMessages)} />
           <KpiCard label="tokens" value={formatNumber(totalTok)} sub={`${formatNumber(tokPerSession)}/session`} />
+          <KpiCard label="total cost" value={formatCost(stats.totalCost)} sub="estimated" />
         </div>
 
         {/* Token overview */}
@@ -525,12 +526,13 @@ export default function RelayDashboard() {
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-4 gap-1 text-center mb-2">
+                <div className="grid grid-cols-5 gap-1 text-center mb-2">
                   {[
                     [u.sessions, 'sessions'],
                     [formatNumber(u.totalMessages), 'messages'],
                     [u.projects, 'projects'],
                     [formatNumber(uTok), 'tokens'],
+                    [formatCost(u.totalCost), 'cost'],
                   ].map(([v, l]) => (
                     <div key={l} className="p-1 rounded-sm" style={{ background: 'var(--c-code-bg)' }}>
                       <div className="text-[11px] font-bold" style={{ color: 'var(--c-white)' }}>{v}</div>
