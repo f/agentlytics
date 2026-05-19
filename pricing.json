@@ -17,6 +17,12 @@
       "cacheWrite": "cache write price (Anthropic: 1.25x input, OpenAI: ~same as input)"
     }
   },
+  "claude-opus-4-7": {
+    "input": 5,
+    "output": 25,
+    "cacheRead": 0.5,
+    "cacheWrite": 6.25
+  },
   "claude-opus-4-6": {
     "input": 5,
     "output": 25,
