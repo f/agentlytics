@@ -278,10 +278,5 @@ All endpoints accept optional `editor` filter. See **[API.md](API.md)** for full
 
 **LLM-based analytics** — We'd love to add intelligent analysis on top of the raw data — session summaries, coding pattern detection, productivity insights, and natural language queries over your agent history. If you have ideas or want to build this, open an issue or PR.
 
-## Contributing
 
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for development setup, editor adapter details, database schema, and how to add support for new editors.
 
-## License
-
-MIT — Built by [@f](https://github.com/f)
