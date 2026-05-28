@@ -13,8 +13,9 @@ const commandcode = require('./commandcode');
 const goose = require('./goose');
 const kiro = require('./kiro');
 const codebuff = require('./codebuff');
+const pi = require('./pi');
 
-const editors = [cursor, windsurf, antigravity, claude, vscode, zed, opencode, codex, gemini, copilot, cursorAgent, commandcode, goose, kiro, codebuff];
+const editors = [cursor, windsurf, antigravity, claude, vscode, zed, opencode, codex, gemini, copilot, cursorAgent, commandcode, goose, kiro, codebuff, pi];
 
 // Build a unified source → display-label map from all editor modules
 const editorLabels = {};
@@ -145,6 +146,7 @@ function getAllMCPServers(projectFolders = []) {
     { file: '.vscode/mcp.json', editor: 'vscode', label: 'VS Code' },
     { file: '.gemini/settings.json', editor: 'gemini-cli', label: 'Gemini CLI' },
     { file: '.kiro/settings/mcp.json', editor: 'kiro', label: 'Kiro' },
+    { file: '.pi/settings.json', editor: 'pi', label: 'Pi Agent' },
   ];
 
   const seenProjects = new Set();

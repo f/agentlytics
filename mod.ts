@@ -908,6 +908,82 @@ function scanCodebuff(): EditorResult {
   return result;
 }
 
+// ── Editor: Pi Agent ────────────────────────────────────────
+
+function scanPi(): EditorResult {
+  const result: EditorResult = { name: "pi", label: "Pi Agent", detected: false, sessions: [] };
+  const piHome = Deno.env.get("PI_CODING_AGENT_DIR") || join(HOME, ".pi", "agent");
+  const sessionsDir = Deno.env.get("PI_CODING_AGENT_SESSION_DIR") || join(piHome, "sessions");
+  if (!existsSync(sessionsDir)) return result;
+  result.detected = true;
+
+  const stack = [sessionsDir];
+  const files: string[] = [];
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    for (const entry of readDirEntries(current)) {
+      const full = join(current, entry.name);
+      if (entry.isDirectory) stack.push(full);
+      else if (entry.isFile && entry.name.endsWith(".jsonl")) files.push(full);
+    }
+  }
+
+  for (const filePath of files) {
+    try {
+      const lines = readTextSync(filePath).split("\n").filter(Boolean);
+      if (lines.length === 0) continue;
+      const header = JSON.parse(lines[0]);
+      if (header.type !== "session") continue;
+
+      let firstPrompt: string | null = null;
+      let msgCount = 0;
+      let lastUpdatedAt: number | null = header.timestamp ? new Date(header.timestamp).getTime() : null;
+
+      for (const line of lines.slice(1)) {
+        try {
+          const obj = JSON.parse(line);
+          const ts = obj.timestamp ? new Date(obj.timestamp).getTime() : null;
+          if (ts && (!lastUpdatedAt || ts > lastUpdatedAt)) lastUpdatedAt = ts;
+          if (obj.type === "custom_message") {
+            if (obj.display !== false) msgCount++;
+            continue;
+          }
+          if (obj.type !== "message" || !obj.message) continue;
+          const role = obj.message.role;
+          if (["user", "assistant", "toolResult", "bashExecution", "custom"].includes(role)) msgCount++;
+          if (!firstPrompt && role === "user") {
+            firstPrompt = extractPiText(obj.message.content).substring(0, 200);
+          }
+        } catch { /* skip line */ }
+      }
+
+      result.sessions.push({
+        source: "pi",
+        composerId: header.id || basename(filePath).replace(".jsonl", ""),
+        name: cleanPrompt(firstPrompt),
+        createdAt: header.timestamp ? new Date(header.timestamp).getTime() : fileBirthtime(filePath),
+        lastUpdatedAt: lastUpdatedAt || fileMtime(filePath),
+        mode: "pi",
+        folder: header.cwd || null,
+        bubbleCount: msgCount,
+        messageCount: msgCount,
+      });
+    } catch { /* skip file */ }
+  }
+
+  return result;
+}
+
+function extractPiText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.map((c: any) => {
+    if (c?.type === "text") return c.text || "";
+    if (c?.type === "image") return `[image: ${c.mimeType || "image"}]`;
+    return "";
+  }).filter(Boolean).join("\n");
+}
+
 function formatRelative(ts: number | null): string {
   if (!ts) return "";
   const diff = Date.now() - ts;
@@ -968,6 +1044,7 @@ ${bold("Full version:")}
   allResults.push(...scanWindsurf());
   allResults.push(scanZed());
   allResults.push(scanCodebuff());
+  allResults.push(scanPi());
 
   // Gather all sessions
   const allSessions = allResults.flatMap((r) => r.sessions);
