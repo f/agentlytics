@@ -20,16 +20,16 @@ function fmtCost(n) {
 
 const EDITOR_COLORS = {
   'cursor': '#f59e0b',
-  'windsurf': '#06b6d4',
-  'windsurf-next': '#22d3ee',
+  'devin': '#2563eb',
+  'devin-next': '#7c3aed',
   'antigravity': '#a78bfa',
   'claude-code': '#f97316',
   'claude': '#f97316',
   'vscode': '#3b82f6',
   'vscode-insiders': '#60a5fa',
   'zed': '#10b981',
-  'opencode': '#ec4899',
-  'codex': '#0f766e',
+  'opencode': '#656363',
+  'codex': '#3941FF',
   'gemini-cli': '#4285f4',
   'copilot-cli': '#8957e5',
   'cursor-agent': '#f59e0b',
@@ -38,8 +38,8 @@ const EDITOR_COLORS = {
 
 const EDITOR_LABELS = {
   'cursor': 'Cursor',
-  'windsurf': 'Windsurf',
-  'windsurf-next': 'WS Next',
+  'devin': 'Devin',
+  'devin-next': 'Devin Next',
   'antigravity': 'Antigravity',
   'claude-code': 'Claude Code',
   'claude': 'Claude Code',
@@ -49,7 +49,7 @@ const EDITOR_LABELS = {
   'opencode': 'OpenCode',
   'codex': 'Codex',
   'gemini-cli': 'Gemini CLI',
-  'copilot-cli': 'Copilot CLI',
+  'copilot-cli': 'GitHub Copilot',
   'cursor-agent': 'Cursor Agent',
   'commandcode': 'Cmd Code',
 };

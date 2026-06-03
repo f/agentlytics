@@ -240,20 +240,20 @@ async function getUsage() {
   };
 }
 
-const labels = { 'copilot-cli': 'Copilot CLI' };
+const labels = { 'copilot-cli': 'GitHub Copilot' };
 
 function getArtifacts(folder) {
   const { scanArtifacts } = require('./base');
   return scanArtifacts(folder, {
     editor: 'copilot-cli',
-    label: 'Copilot',
+    label: 'GitHub Copilot',
     files: ['.github/copilot-instructions.md'],
     dirs: [],
   });
 }
 
 function getMCPServers() {
-  // Copilot CLI shares MCP config with VS Code (handled by vscode.js)
+  // GitHub Copilot shares MCP config with VS Code (handled by vscode.js)
   return [];
 }
 

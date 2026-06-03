@@ -5,7 +5,7 @@
 <h1 align="center">Agentlytics</h1>
 
 <p align="center">
-  <strong>Your Cursor, Windsurf, Claude Code sessions — analyzed, unified, tracked.</strong><br>
+  <strong>Your Cursor, Devin, Claude Code sessions — analyzed, unified, tracked.</strong><br>
   <sub>One command to turn scattered AI conversations from <b>17 editors</b> into a unified analytics dashboard.<br>Sessions, costs, models, tools — finally in one place. 100% local.</sub>
 </p>
 
@@ -25,7 +25,7 @@
 
 ## The Problem
 
-You switch between Cursor, Windsurf, Claude Code, VS Code Copilot, and more — each with its own siloed conversation history.
+You switch between Cursor, Devin, Claude Code, VS Code Copilot, and more — each with its own siloed conversation history.
 
 - ✗ Sessions scattered across editors, no unified view
 - ✗ No idea how much you're spending on AI tokens
@@ -103,8 +103,8 @@ $ npx agentlytics
 
 Looking for AI coding agents...
    ✓ Cursor              498 sessions
-   ✓ Windsurf             20 sessions
-   ✓ Windsurf Next        56 sessions
+   ✓ Devin                20 sessions
+   ✓ Devin Next           56 sessions
    ✓ Claude Code           6 sessions
    ✓ VS Code              23 sessions
    ✓ Zed                   1 session
@@ -131,7 +131,7 @@ npx agentlytics --collect
 - **Projects** — Per-project analytics: sessions, messages, tokens, models, editor breakdown, and drill-down detail views
 - **Deep Analysis** — Tool frequency heatmaps, model distribution, token breakdown, and filterable drill-down analytics
 - **Compare** — Side-by-side editor comparison with efficiency ratios, token usage, and session patterns
-- **Subscriptions** — Live view of your editor plans, usage quotas, remaining credits, and rate limits across Cursor, Windsurf, Claude Code, Copilot, Codex, and more
+- **Subscriptions** — Live view of your editor plans, usage quotas, remaining credits, and rate limits across Cursor, Devin, Claude Code, Copilot, Codex, and more
 - **Relay** — Share AI session context across your team via MCP
 
 ## Supported Editors
@@ -139,8 +139,8 @@ npx agentlytics --collect
 | Editor | Msgs | Tools | Models | Tokens |
 |--------|:----:|:-----:|:------:|:------:|
 | **Cursor** | ✅ | ✅ | ✅ | ✅ |
-| **Windsurf** | ✅ | ✅ | ✅ | ✅ |
-| **Windsurf Next** | ✅ | ✅ | ✅ | ✅ |
+| **Devin** | ✅ | ✅ | ✅ | ✅ |
+| **Devin Next** | ✅ | ✅ | ✅ | ✅ |
 | **Antigravity** | ✅ | ✅ | ✅ | ✅ |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ |
 | **VS Code** | ✅ | ✅ | ✅ | ✅ |
@@ -149,14 +149,14 @@ npx agentlytics --collect
 | **OpenCode** | ✅ | ✅ | ✅ | ✅ |
 | **Codex** | ✅ | ✅ | ✅ | ✅ |
 | **Gemini CLI** | ✅ | ✅ | ✅ | ✅ |
-| **Copilot CLI** | ✅ | ✅ | ✅ | ✅ |
+| **GitHub Copilot** | ✅ | ✅ | ✅ | ✅ |
 | **Cursor Agent** | ✅ | ❌ | ❌ | ❌ |
 | **Command Code** | ✅ | ✅ | ❌ | ❌ |
 | **Goose** | ✅ | ✅ | ✅ | ❌ |
 | **Kiro** | ✅ | ✅ | ✅ | ❌ |
 | **Codebuff** | ✅ | ✅ | ⚠️ | ⚠️ |
 
-> Windsurf, Windsurf Next, and Antigravity must be running during scan.
+> Devin, Devin Next, and Antigravity must be running during scan.
 
 ## Relay
 
@@ -266,7 +266,7 @@ All endpoints accept optional `editor` filter. See **[API.md](API.md)** for full
 
 ## Roadmap
 
-- [ ] **Offline Windsurf/Antigravity support** — Read cascade data from local file structure instead of requiring the app to be running (see below)
+- [ ] **Offline Devin/Antigravity support** — Read cascade data from local file structure instead of requiring the app to be running (see below)
 - [ ] **LLM-powered insights** — Use an LLM to analyze session patterns, generate summaries, detect coding habits, and surface actionable recommendations
 - [ ] **Linux & Windows support** — Adapt editor paths for non-macOS platforms
 - [ ] **Export & reports** — PDF/CSV export of analytics and session data
@@ -274,7 +274,7 @@ All endpoints accept optional `editor` filter. See **[API.md](API.md)** for full
 
 ## Contributions Needed
 
-**Windsurf / Windsurf Next / Antigravity offline reading** — Currently these editors require their app to be running because data is fetched via ConnectRPC from the language server process. Unlike Cursor or Claude Code, there's no known local file structure to read cascade history from. If you know where Windsurf stores trajectory data on disk, or can help reverse-engineer the storage format, contributions are very welcome.
+**Devin / Devin Next / Antigravity offline reading** — Currently these editors require their app to be running because data is fetched via ConnectRPC from the language server process. Unlike Cursor or Claude Code, there's no known local file structure to read cascade history from. Legacy Windsurf identifiers and `~/.windsurf` configuration are still supported for backwards compatibility.
 
 **LLM-based analytics** — We'd love to add intelligent analysis on top of the raw data — session summaries, coding pattern detection, productivity insights, and natural language queries over your agent history. If you have ideas or want to build this, open an issue or PR.
 

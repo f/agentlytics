@@ -110,7 +110,7 @@ Reads from **two separate data stores**:
 
 **Limitations:** Cursor does not persist model names per message. Provider name (e.g., "anthropic") extracted from `providerOptions` when available.
 
-### Windsurf / Windsurf Next / Antigravity
+### Devin / Devin Next / Antigravity
 
 Connects to the **running language server** via ConnectRPC (buf Connect protocol):
 

@@ -259,7 +259,7 @@ export default function App() {
       {refetchState && (
         <div className="flex items-center gap-2 px-4 py-1.5 text-[12px]" style={{ background: 'rgba(234,179,8,0.08)', borderBottom: '1px solid rgba(234,179,8,0.15)', color: '#ca8a04' }}>
           <AlertTriangle size={12} />
-          <span>Windsurf, Windsurf Next, and Antigravity require their app to be running during refetch — otherwise their sessions won't be detected.</span>
+          <span>Devin, Devin Next, and Antigravity require their app to be running during refetch — otherwise their sessions won't be detected.</span>
         </div>
       )}
 

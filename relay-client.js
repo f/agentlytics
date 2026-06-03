@@ -10,8 +10,8 @@ const SYNC_INTERVAL_MS = 30000; // 30 seconds
 
 const EDITOR_LABELS = {
   'cursor': 'Cursor',
-  'windsurf': 'Windsurf',
-  'windsurf-next': 'Windsurf Next',
+  'devin': 'Devin',
+  'devin-next': 'Devin Next',
   'antigravity': 'Antigravity',
   'claude-code': 'Claude Code',
   'claude': 'Claude Code',
@@ -21,7 +21,7 @@ const EDITOR_LABELS = {
   'opencode': 'OpenCode',
   'codex': 'Codex CLI',
   'gemini-cli': 'Gemini CLI',
-  'copilot-cli': 'Copilot CLI',
+  'copilot-cli': 'GitHub Copilot',
   'cursor-agent': 'Cursor (Background Agent)',
   'commandcode': 'CommandCode',
 };

@@ -52,6 +52,12 @@ function normalizeFolder(folder) {
   return folder;
 }
 
+function normalizeEditorSource(source) {
+  if (source === 'windsurf') return 'devin';
+  if (source === 'windsurf-next') return 'devin-next';
+  return source;
+}
+
 let db = null;
 
 // ============================================================
@@ -191,6 +197,22 @@ function initDb() {
   // Store schema version so future runs can detect mismatches
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run('schema_version', SCHEMA_VERSION.toString());
 
+  let sourceMigrationV = 0;
+  try {
+    const row = db.prepare("SELECT value FROM meta WHERE key = 'source_id_migration_v'").get();
+    if (row) sourceMigrationV = parseInt(row.value) || 0;
+  } catch { }
+  if (sourceMigrationV < 1) {
+    const migrateSource = db.transaction(() => {
+      db.prepare("UPDATE chats SET source = 'devin' WHERE source = 'windsurf'").run();
+      db.prepare("UPDATE chats SET source = 'devin-next' WHERE source = 'windsurf-next'").run();
+      db.prepare("UPDATE tool_calls SET source = 'devin' WHERE source = 'windsurf'").run();
+      db.prepare("UPDATE tool_calls SET source = 'devin-next' WHERE source = 'windsurf-next'").run();
+      db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('source_id_migration_v', '1')").run();
+    });
+    migrateSource();
+  }
+
   // v2 migration: normalize folder paths on Windows
   if (process.platform === 'win32') {
     let normV = 0;
@@ -261,6 +283,7 @@ function analyzeAndStore(chat) {
   const updBubbleCount = updateChatBubbleCount();
   const insTc = db.prepare('INSERT INTO tool_calls (chat_id, tool_name, args_json, source, folder, timestamp) VALUES (?, ?, ?, ?, ?, ?)');
   const chatTs = chat.lastUpdatedAt || chat.createdAt || null;
+  const chatSource = normalizeEditorSource(chat.source);
 
   let seq = 0;
   for (const msg of messages) {
@@ -277,7 +300,7 @@ function analyzeAndStore(chat) {
         for (const tc of msg._toolCalls) {
           stats.toolCalls.push(tc.name);
           try {
-            insTc.run(chat.composerId, tc.name, JSON.stringify(tc.args || {}), chat.source, chat.folder || null, chatTs);
+            insTc.run(chat.composerId, tc.name, JSON.stringify(tc.args || {}), chatSource, chat.folder || null, chatTs);
           } catch { }
         }
       } else {
@@ -286,7 +309,7 @@ function analyzeAndStore(chat) {
           for (const m of toolMatches) {
             const name = m.match(/\[tool-call: ([^(]+)/)?.[1] || 'unknown';
             stats.toolCalls.push(name.trim());
-            insTc.run(chat.composerId, name.trim(), '{}', chat.source, chat.folder || null, chatTs);
+            insTc.run(chat.composerId, name.trim(), '{}', chatSource, chat.folder || null, chatTs);
           }
         }
       }
@@ -338,7 +361,7 @@ function scanAll(onProgress, opts = {}) {
   const batchInsert = db.transaction((chatBatch) => {
     for (const chat of chatBatch) {
       ins.run(
-        chat.composerId, chat.source, chat.name || null, chat.mode || null,
+        chat.composerId, normalizeEditorSource(chat.source), chat.name || null, chat.mode || null,
         chat.folder || null, chat.createdAt || null, chat.lastUpdatedAt || null,
         chat.encrypted ? 1 : 0, chat.bubbleCount || 0,
         JSON.stringify({ _type: chat._type, _dbPath: chat._dbPath, _filePath: chat._filePath, _port: chat._port, _csrf: chat._csrf, _https: chat._https, _rootBlobId: chat._rootBlobId, _dataType: chat._dataType, _rawSource: chat._rawSource, _originator: chat._originator, _cliVersion: chat._cliVersion, _modelProvider: chat._modelProvider })

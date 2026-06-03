@@ -582,11 +582,11 @@ function scanCommandCode(): EditorResult {
   return result;
 }
 
-// ── Editor: Copilot CLI ──────────────────────────────────────
+// ── Editor: GitHub Copilot ───────────────────────────────────
 
 function scanCopilot(): EditorResult {
   const sessionStateDir = join(HOME, ".copilot", "session-state");
-  const result: EditorResult = { name: "copilot-cli", label: "Copilot CLI", detected: false, sessions: [] };
+  const result: EditorResult = { name: "copilot-cli", label: "GitHub Copilot", detected: false, sessions: [] };
 
   if (!existsSync(sessionStateDir)) return result;
   result.detected = true;
@@ -773,17 +773,17 @@ function scanOpenCode(): EditorResult {
   return result;
 }
 
-// ── Editor: Windsurf / Antigravity (detection only) ──────────
+// ── Editor: Devin / Antigravity (detection only) ──────────
 
-function scanWindsurf(): EditorResult[] {
+function scanDevin(): EditorResult[] {
   const variants = [
-    { id: "windsurf", label: "Windsurf", dataDir: join(HOME, ".codeium", "windsurf") },
-    { id: "windsurf-next", label: "Windsurf Next", dataDir: join(HOME, ".codeium", "windsurf-next") },
-    { id: "antigravity", label: "Antigravity", dataDir: join(HOME, ".codeium", "antigravity") },
+    { id: "devin", label: "Devin", dataDirs: [join(HOME, ".windsurf"), join(HOME, ".codeium", "windsurf")] },
+    { id: "devin-next", label: "Devin Next", dataDirs: [join(HOME, ".codeium", "windsurf-next")] },
+    { id: "antigravity", label: "Antigravity", dataDirs: [join(HOME, ".codeium", "antigravity")] },
   ];
 
   return variants.map((v) => {
-    const detected = existsSync(v.dataDir);
+    const detected = v.dataDirs.some((dataDir) => existsSync(dataDir));
     return {
       name: v.id,
       label: v.label,
@@ -965,7 +965,7 @@ ${bold("Full version:")}
   allResults.push(scanKiro());
   allResults.push(scanGoose());
   allResults.push(scanOpenCode());
-  allResults.push(...scanWindsurf());
+  allResults.push(...scanDevin());
   allResults.push(scanZed());
   allResults.push(scanCodebuff());
 

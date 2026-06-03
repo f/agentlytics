@@ -532,7 +532,7 @@ app.get('/api/mcps', async (req, res) => {
 
     // 5. Match tool calls to MCP servers using actual queried tool names.
     //    Editors prefix MCP tool names in various ways:
-    //    - Windsurf: mcp{N}_{toolName}  (e.g. mcp1_query-docs)
+    //    - Devin: mcp{N}_{toolName}  (e.g. mcp1_query-docs)
     //    - Cursor:   mcp_{ServerName}_{toolName}  (e.g. mcp_Figma_get_figma_data)
     //    - VS Code:  mcp_{sanitizedId}_{toolName}  (e.g. mcp_io_github_byt_execute_sql)
     //    - Others:   {server}_{sep}_{toolName}  (e.g. prompts_chat__search_prompts)
@@ -546,7 +546,7 @@ app.get('/api/mcps', async (req, res) => {
       const tcName = tc.name;
       let serverName = null;
 
-      // Pattern 1: Windsurf — mcp{N}_{toolName}
+      // Pattern 1: Devin — mcp{N}_{toolName}
       const windsurfMatch = tcName.match(/^mcp(\d+)_(.+)$/);
       if (windsurfMatch) {
         const stripped = windsurfMatch[2];
