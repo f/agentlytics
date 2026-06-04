@@ -15,7 +15,7 @@ export const EDITOR_COLORS = {
   'cursor-agent': '#f59e0b',
   'commandcode': '#e11d48',
   'goose': '#333333',
-  'kiro': '#ff9900',
+  'kiro': '#9046FF',
   'codebuff': '#44ff00',
 };
 

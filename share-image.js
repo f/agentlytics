@@ -34,6 +34,7 @@ const EDITOR_COLORS = {
   'copilot-cli': '#8957e5',
   'cursor-agent': '#f59e0b',
   'commandcode': '#e11d48',
+  'kiro': '#9046FF',
 };
 
 const EDITOR_LABELS = {
@@ -52,6 +53,7 @@ const EDITOR_LABELS = {
   'copilot-cli': 'GitHub Copilot',
   'cursor-agent': 'Cursor Agent',
   'commandcode': 'Cmd Code',
+  'kiro': 'Kiro',
 };
 
 /**
