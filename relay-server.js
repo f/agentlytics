@@ -4,6 +4,22 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
+const { calculateCost } = require('./pricing');
+
+// Estimate USD cost for a single chat's token usage. A chat may list multiple
+// models without a per-model token split, so tokens are divided evenly across
+// the models used. Unpriced models contribute 0 (matches Cost Analysis behavior).
+function estimateChatCost(modelsJson, inputTokens, outputTokens) {
+  let models = [];
+  try { models = JSON.parse(modelsJson || '[]'); } catch {}
+  if (models.length === 0) return 0;
+  const n = models.length;
+  let cost = 0;
+  for (const m of models) {
+    cost += calculateCost(m, (inputTokens || 0) / n, (outputTokens || 0) / n) || 0;
+  }
+  return cost;
+}
 
 const CACHE_DIR = path.join(os.homedir(), '.agentlytics');
 const RELAY_DB_PATH = path.join(CACHE_DIR, 'relay.db');
@@ -164,18 +180,23 @@ function createRelayApp() {
         userEditorMap[r.username][r.source] = r.count;
       }
 
-      const perUserModels = db.prepare(`
-        SELECT rcs.username, rcs.models
+      const perChatStats = db.prepare(`
+        SELECT rcs.username, rcs.models, rcs.total_input_tokens, rcs.total_output_tokens
         FROM relay_chat_stats rcs
       `).all();
       const userModelMap = {};
-      for (const r of perUserModels) {
+      const userCostMap = {};
+      let totalCost = 0;
+      for (const r of perChatStats) {
         if (!userModelMap[r.username]) userModelMap[r.username] = {};
         try {
           for (const m of JSON.parse(r.models || '[]')) {
             userModelMap[r.username][m] = (userModelMap[r.username][m] || 0) + 1;
           }
         } catch {}
+        const cost = estimateChatCost(r.models, r.total_input_tokens, r.total_output_tokens);
+        userCostMap[r.username] = (userCostMap[r.username] || 0) + cost;
+        totalCost += cost;
       }
 
       const totalTokens = db.prepare(`
@@ -199,6 +220,7 @@ function createRelayApp() {
         totalMessages: totalTokens.messages,
         totalInputTokens: totalTokens.inputTokens,
         totalOutputTokens: totalTokens.outputTokens,
+        totalCost,
         editors: editorBreakdown.map(e => ({ source: e.source, count: e.count, users: e.users })),
         topModels: Object.entries(modelFreq).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([name, count]) => ({ name, count })),
         users: perUser.map(u => ({
@@ -210,6 +232,7 @@ function createRelayApp() {
           totalMessages: u.totalMessages,
           totalInputTokens: u.totalInputTokens,
           totalOutputTokens: u.totalOutputTokens,
+          totalCost: userCostMap[u.username] || 0,
           topModels: Object.entries(userModelMap[u.username] || {}).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count })),
           sharedProjects: JSON.parse((users.find(x => x.username === u.username) || {}).projects || '[]'),
         })),
