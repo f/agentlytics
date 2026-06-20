@@ -22,6 +22,7 @@ const EDITOR_LABELS = {
   'codex': 'Codex CLI',
   'gemini-cli': 'Gemini CLI',
   'copilot-cli': 'GitHub Copilot',
+  'copilot-jetbrains': 'GitHub Copilot - JetBrains',
   'cursor-agent': 'Cursor (Background Agent)',
   'commandcode': 'CommandCode',
 };

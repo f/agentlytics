@@ -57,6 +57,7 @@ const EDITOR_ICONS = {
   'zed': 'zed',
   'gemini-cli': 'gemini',
   'copilot-cli': 'copilot',
+  'copilot-jetbrains': 'copilot',
   'opencode': 'opencode',
   'codex': 'codex',
   'commandcode': 'command',
