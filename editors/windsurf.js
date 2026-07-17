@@ -3,10 +3,24 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 
-// Windsurf variants: Windsurf, Windsurf Next
+// Devin variants. Keep legacy Windsurf identifiers only for detection/config compatibility.
 const VARIANTS = [
-  { id: 'windsurf', matchKey: 'ide', matchVal: 'windsurf', https: false, appName: 'Windsurf', needsMetadata: true },
-  { id: 'windsurf-next', matchKey: 'ide', matchVal: 'windsurf-next', https: false, appName: 'Windsurf - Next', needsMetadata: true },
+  {
+    id: 'devin',
+    matchKey: 'ide',
+    matchVals: ['windsurf', 'devin', 'devin-desktop'],
+    https: false,
+    appNames: ['Devin Desktop', 'Devin', 'Windsurf'],
+    needsMetadata: true,
+  },
+  {
+    id: 'devin-next',
+    matchKey: 'ide',
+    matchVals: ['windsurf-next', 'devin-next', 'devin-desktop-next'],
+    https: false,
+    appNames: ['Devin Desktop - Next', 'Devin - Next', 'Windsurf - Next'],
+    needsMetadata: true,
+  },
 ];
 
 // ============================================================
@@ -85,7 +99,7 @@ function getListeningPorts(pid) {
 }
 
 // ============================================================
-// Find running Windsurf language server (port + CSRF token)
+// Find running Devin language server (port + CSRF token)
 // ============================================================
 
 let _lsCache = null;
@@ -101,13 +115,13 @@ function findLanguageServers() {
       ? 'language_server_macos'
       : 'language_server_linux';
 
-  // On macOS/Linux, also check env vars for WINDSURF_CSRF_TOKEN (newer Windsurf Next passes CSRF via env, not CLI arg)
+  // On macOS/Linux, also check env vars for CSRF tokens (some variants pass CSRF via env, not CLI arg)
   const envCsrfByPid = {};
   if (!IS_WINDOWS) {
     try {
       const psEnv = execSync('ps eww -A', { encoding: 'utf-8', maxBuffer: 2 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
       for (const envLine of psEnv.split('\n')) {
-        const envCsrf = envLine.match(/WINDSURF_CSRF_TOKEN=(\S+)/);
+        const envCsrf = envLine.match(/(?:WINDSURF|DEVIN)_CSRF_TOKEN=(\S+)/);
         if (envCsrf) {
           const envPid = envLine.match(/^\s*(\d+)/);
           if (envPid) envCsrfByPid[envPid[1]] = envCsrf[1];
@@ -162,10 +176,11 @@ function findLanguageServers() {
 function getLsForVariant(variant) {
   const servers = findLanguageServers();
   let matches;
+  const matchVals = variant.matchVals || [variant.matchVal];
   if (variant.matchKey === 'appDataDir') {
-    matches = servers.filter(s => s.appDataDir?.includes(variant.matchVal));
+    matches = servers.filter(s => matchVals.some(matchVal => s.appDataDir?.includes(matchVal)));
   } else {
-    matches = servers.filter(s => s.ide === variant.matchVal);
+    matches = servers.filter(s => matchVals.includes(s.ide));
   }
   return matches.length > 0 ? matches[0] : null;
 }
@@ -197,8 +212,9 @@ function callRpc(port, csrf, method, body, extCsrf = null) {
 // Adapter interface
 // ============================================================
 
-const name = 'windsurf';
-const sources = ['windsurf', 'windsurf-next'];
+const name = 'devin';
+const sources = ['devin', 'devin-next'];
+const legacySources = ['windsurf', 'windsurf-next'];
 
 function getChats() {
   const chats = [];
@@ -449,29 +465,39 @@ function getMessages(chat) {
 // Usage / quota data from language server RPC
 // ============================================================
 
-function getWindsurfApiKey(appName) {
-  if (!appName) return null;
+function getDevinApiKey(appNames) {
+  if (!appNames) return null;
+  const names = Array.isArray(appNames) ? appNames : [appNames];
+  const keys = ['windsurfAuthStatus', 'devinAuthStatus'];
   try {
     const HOME = os.homedir();
-    let dbPath;
-    switch (process.platform) {
-      case 'darwin':
-        dbPath = path.join(HOME, 'Library', 'Application Support', appName, 'User', 'globalStorage', 'state.vscdb');
-        break;
-      case 'win32':
-        dbPath = path.join(HOME, 'AppData', 'Roaming', appName, 'User', 'globalStorage', 'state.vscdb');
-        break;
-      default:
-        dbPath = path.join(HOME, '.config', appName, 'User', 'globalStorage', 'state.vscdb');
+    for (const appName of names) {
+      let dbPath;
+      switch (process.platform) {
+        case 'darwin':
+          dbPath = path.join(HOME, 'Library', 'Application Support', appName, 'User', 'globalStorage', 'state.vscdb');
+          break;
+        case 'win32':
+          dbPath = path.join(HOME, 'AppData', 'Roaming', appName, 'User', 'globalStorage', 'state.vscdb');
+          break;
+        default:
+          dbPath = path.join(HOME, '.config', appName, 'User', 'globalStorage', 'state.vscdb');
+      }
+      if (!fs.existsSync(dbPath)) continue;
+      const Database = require('better-sqlite3');
+      const db = new Database(dbPath, { readonly: true });
+      try {
+        for (const key of keys) {
+          const row = db.prepare('SELECT value FROM ItemTable WHERE key = ?').get(key);
+          if (!row) continue;
+          const parsed = JSON.parse(row.value);
+          if (parsed.apiKey) return parsed.apiKey;
+        }
+      } finally {
+        db.close();
+      }
     }
-    if (!fs.existsSync(dbPath)) return null;
-    const Database = require('better-sqlite3');
-    const db = new Database(dbPath, { readonly: true });
-    const row = db.prepare("SELECT value FROM ItemTable WHERE key = 'windsurfAuthStatus'").get();
-    db.close();
-    if (!row) return null;
-    const parsed = JSON.parse(row.value);
-    return parsed.apiKey || null;
+    return null;
   } catch { return null; }
 }
 
@@ -485,7 +511,7 @@ function getUsage() {
     const ls = getLsForVariant(variant);
     if (!ls) continue;
 
-    const apiKey = getWindsurfApiKey(variant.appName);
+    const apiKey = getDevinApiKey(variant.appNames);
     if (!apiKey) continue;
     const body = {
       metadata: {
@@ -579,13 +605,13 @@ function getUsage() {
 
 function resetCache() { _lsCache = null; }
 
-const labels = { 'windsurf': 'Windsurf', 'windsurf-next': 'Windsurf Next' };
+const labels = { 'devin': 'Devin', 'devin-next': 'Devin Next' };
 
 function getArtifacts(folder) {
   const { scanArtifacts } = require('./base');
   return scanArtifacts(folder, {
-    editor: 'windsurf',
-    label: 'Windsurf',
+    editor: 'devin',
+    label: 'Devin',
     files: ['.windsurfrules'],
     dirs: ['.windsurf/workflows', '.windsurf/rules', '.windsurf/plans', '.windsurf/skills'],
   });
@@ -595,8 +621,9 @@ function getMCPServers() {
   const { parseMcpConfigFile } = require('./base');
   const results = [];
   const configs = [
-    { file: path.join(os.homedir(), '.codeium', 'windsurf', 'mcp_config.json'), editor: 'windsurf', label: 'Windsurf' },
-    { file: path.join(os.homedir(), '.codeium', 'windsurf-next', 'mcp_config.json'), editor: 'windsurf-next', label: 'Windsurf Next' },
+    { file: path.join(os.homedir(), '.windsurf', 'mcp_config.json'), editor: 'devin', label: 'Devin' },
+    { file: path.join(os.homedir(), '.codeium', 'windsurf', 'mcp_config.json'), editor: 'devin', label: 'Devin' },
+    { file: path.join(os.homedir(), '.codeium', 'windsurf-next', 'mcp_config.json'), editor: 'devin-next', label: 'Devin Next' },
   ];
   for (const c of configs) {
     results.push(...parseMcpConfigFile(c.file, { editor: c.editor, label: c.label, scope: 'global' }));
@@ -604,4 +631,4 @@ function getMCPServers() {
   return results;
 }
 
-module.exports = { name, sources, labels, getChats, getMessages, resetCache, getUsage, getArtifacts, getMCPServers };
+module.exports = { name, sources, legacySources, labels, getChats, getMessages, resetCache, getUsage, getArtifacts, getMCPServers };

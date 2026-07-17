@@ -106,7 +106,7 @@ function CursorCard({ data }) {
   )
 }
 
-function WindsurfCard({ data }) {
+function DevinCard({ data }) {
   const u = data.usage || {}
   const billing = data.billingCycle || {}
   return (
@@ -294,7 +294,7 @@ function EditorCard({ data }) {
   const cardRenderer = () => {
     switch (source) {
       case 'cursor': return <CursorCard data={data} />
-      case 'windsurf': case 'windsurf-next': case 'antigravity': return <WindsurfCard data={data} />
+      case 'devin': case 'devin-next': case 'antigravity': return <DevinCard data={data} />
       case 'claude-code': return <ClaudeCodeCard data={data} />
       case 'vscode': case 'vscode-insiders': return <CopilotCard data={data} />
       case 'copilot-cli': return <CopilotCard data={data} />
@@ -303,7 +303,7 @@ function EditorCard({ data }) {
     }
   }
 
-  // Models list (Windsurf variants)
+  // Models list (Devin variants)
   const models = data.models || []
 
   return (

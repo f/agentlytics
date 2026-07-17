@@ -1,5 +1,6 @@
 const chalk = require('chalk');
 const http = require('http');
+const https = require('https');
 const readline = require('readline');
 const crypto = require('crypto');
 
@@ -9,8 +10,8 @@ const SYNC_INTERVAL_MS = 30000; // 30 seconds
 
 const EDITOR_LABELS = {
   'cursor': 'Cursor',
-  'windsurf': 'Windsurf',
-  'windsurf-next': 'Windsurf Next',
+  'devin': 'Devin',
+  'devin-next': 'Devin Next',
   'antigravity': 'Antigravity',
   'claude-code': 'Claude Code',
   'claude': 'Claude Code',
@@ -20,7 +21,8 @@ const EDITOR_LABELS = {
   'opencode': 'OpenCode',
   'codex': 'Codex CLI',
   'gemini-cli': 'Gemini CLI',
-  'copilot-cli': 'Copilot CLI',
+  'copilot-cli': 'GitHub Copilot',
+  'copilot-jetbrains': 'GitHub Copilot - JetBrains',
   'cursor-agent': 'Cursor (Background Agent)',
   'commandcode': 'CommandCode',
 };
@@ -177,7 +179,7 @@ function collectProjectData(selectedFolders) {
 /**
  * POST data to relay server.
  */
-function postToRelay(host, port, username, data, authToken) {
+function postToRelay(scheme, host, port, username, data, authToken) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
       username,
@@ -200,8 +202,8 @@ function postToRelay(host, port, username, data, authToken) {
       method: 'POST',
       headers,
     };
-
-    const req = http.request(options, (res) => {
+    const client = scheme === 'https' ? https : http
+    const req = client.request(options, (res) => {
       let body = '';
       res.on('data', (chunk) => { body += chunk; });
       res.on('end', () => {
@@ -234,6 +236,7 @@ async function startJoinClient(relayAddress, username) {
 
   // Parse host:port
   const parts = relayAddress.replace(/^https?:\/\//, '').split(':');
+  const scheme = relayAddress.startsWith("https://") ? "https" : 'http'
   const host = parts[0] || 'localhost';
   const port = parseInt(parts[1]) || 4638;
 
@@ -245,7 +248,7 @@ async function startJoinClient(relayAddress, username) {
 
   // Test connection
   try {
-    const testResult = await postToRelay(host, port, username, { projects: [], chats: [], messages: [], stats: [] }, authToken);
+    const testResult = await postToRelay(scheme, host, port, username, { projects: [], chats: [], messages: [], stats: [] }, authToken);
     if (!testResult.ok) {
       const msg = testResult.error || 'unknown error';
       if (msg === 'Unauthorized') {
@@ -278,7 +281,7 @@ async function startJoinClient(relayAddress, username) {
       cache.scanAll(() => {}, { resetCaches: true });
       const data = collectProjectData(selectedFolders);
       data.projects = selectedFolders;
-      const result = await postToRelay(host, port, username, data, authToken);
+      const result = await postToRelay(scheme, host, port, username, data, authToken);
       if (result.ok) {
         const s = result.synced || {};
         process.stdout.write(chalk.dim(`\r  ⟳ Synced: ${s.chats || 0} chats, ${s.messages || 0} messages — ${new Date().toLocaleTimeString()}    `));

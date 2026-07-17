@@ -36,7 +36,7 @@ function getAppDataPath(appName) {
 /**
  * Every editor adapter must implement:
  *
- *   name        - string identifier (e.g. 'cursor', 'windsurf')
+ *   name        - string identifier (e.g. 'cursor', 'devin')
  *   getChats()  - returns array of chat objects:
  *       { source, composerId, name, createdAt, lastUpdatedAt, mode, folder, bubbleCount, encrypted }
  *   getMessages(chat) - returns array of message objects:

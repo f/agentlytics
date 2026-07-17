@@ -1,9 +1,0 @@
-{
-  "tasks": {
-    "start": "deno run --allow-read --allow-write --allow-net --allow-env --allow-ffi --allow-run index.js",
-    "collect": "deno run --allow-read --allow-write --allow-env --allow-ffi index.js --collect",
-    "scan": "deno run --allow-read --allow-env mod.ts",
-    "scan:json": "deno run --allow-read --allow-env mod.ts --json"
-  },
-  "nodeModulesDir": "auto"
-}

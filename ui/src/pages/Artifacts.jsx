@@ -10,18 +10,6 @@ import PageHeader from '../components/PageHeader'
 
 const MONO = 'JetBrains Mono, monospace'
 
-const EDITOR_ICONS = {
-  'claude-code': '🟠',
-  'cursor': '🟡',
-  'windsurf': '🔵',
-  'kiro': '🟠',
-  'copilot-cli': '🟣',
-  'codex': '🟢',
-  'gemini-cli': '🔵',
-  'goose': '⚫',
-  '_general': '📄',
-}
-
 function formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'

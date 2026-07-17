@@ -1,5 +1,5 @@
 const cursor = require('./cursor');
-const windsurf = require('./windsurf');
+const devin = require('./windsurf');
 const antigravity = require('./antigravity');
 const claude = require('./claude');
 const vscode = require('./vscode');
@@ -8,12 +8,14 @@ const opencode = require('./opencode');
 const codex = require('./codex');
 const gemini = require('./gemini');
 const copilot = require('./copilot');
+const copilotJetbrains = require('./copilot-jetbrains');
 const cursorAgent = require('./cursor-agent');
 const commandcode = require('./commandcode');
 const goose = require('./goose');
 const kiro = require('./kiro');
+const codebuff = require('./codebuff');
 
-const editors = [cursor, windsurf, antigravity, claude, vscode, zed, opencode, codex, gemini, copilot, cursorAgent, commandcode, goose, kiro];
+const editors = [cursor, devin, antigravity, claude, vscode, zed, opencode, codex, gemini, copilot, copilotJetbrains, cursorAgent, commandcode, goose, kiro, codebuff];
 
 // Build a unified source → display-label map from all editor modules
 const editorLabels = {};
@@ -47,9 +49,13 @@ function getAllChats() {
  */
 function getMessages(chat) {
   const editor = editors.find((e) => e.name === chat.source);
-  // Match variants: windsurf-next, antigravity, claude-code, vscode-insiders etc.
+  // Match variants: devin-next, antigravity, claude-code, vscode-insiders, plus legacy aliases.
   const resolvedEditor = editor || editors.find((e) =>
-    chat.source && (chat.source.startsWith(e.name) || (e.sources && e.sources.includes(chat.source)))
+    chat.source && (
+      chat.source.startsWith(e.name) ||
+      (e.sources && e.sources.includes(chat.source)) ||
+      (e.legacySources && e.legacySources.includes(chat.source))
+    )
   );
   if (!resolvedEditor) return [];
   return resolvedEditor.getMessages(chat);
@@ -72,7 +78,7 @@ async function getAllUsage() {
     try {
       const usage = await editor.getUsage();
       if (!usage) continue;
-      // Windsurf returns an array (one per variant), Cursor returns a single object
+      // Devin returns an array (one per variant), Cursor returns a single object
       if (Array.isArray(usage)) results.push(...usage);
       else results.push(usage);
     } catch { /* skip broken adapters */ }

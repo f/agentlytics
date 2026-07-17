@@ -247,11 +247,21 @@ if (noCache) {
   }
 }
 
-// ── Warn about installed-but-not-running Windsurf variants (macOS only) ─
+// ── Warn about installed-but-not-running Devin variants (macOS only) ─
 if (process.platform === 'darwin') {
-const WINDSURF_VARIANTS = [
-  { name: 'Windsurf', app: '/Applications/Windsurf.app', dataDir: path.join(HOME, '.codeium', 'windsurf'), ide: 'windsurf' },
-  { name: 'Windsurf Next', app: '/Applications/Windsurf Next.app', dataDir: path.join(HOME, '.codeium', 'windsurf-next'), ide: 'windsurf-next' },
+const DEVIN_DESKTOP_VARIANTS = [
+  {
+    name: 'Devin',
+    apps: ['/Applications/Devin Desktop.app', '/Applications/Devin.app', '/Applications/Windsurf.app'],
+    dataDirs: [path.join(HOME, '.windsurf'), path.join(HOME, '.codeium', 'windsurf')],
+    ides: ['devin-desktop', 'devin', 'windsurf'],
+  },
+  {
+    name: 'Devin Next',
+    apps: ['/Applications/Devin Desktop Next.app', '/Applications/Devin Next.app', '/Applications/Windsurf Next.app'],
+    dataDirs: [path.join(HOME, '.codeium', 'windsurf-next')],
+    ides: ['devin-desktop-next', 'devin-next', 'windsurf-next'],
+  },
   { name: 'Antigravity', app: '/Applications/Antigravity.app', dataDir: path.join(HOME, '.codeium', 'antigravity'), ide: 'antigravity' },
 ];
 
@@ -269,9 +279,12 @@ const WINDSURF_VARIANTS = [
     }
   } catch {}
 
-  const installedNotRunning = WINDSURF_VARIANTS.filter(v => {
-    const installed = fs.existsSync(v.app) || fs.existsSync(v.dataDir);
-    const running = runningIdes.some(r => r === v.ide || r.includes(v.ide));
+  const installedNotRunning = DEVIN_DESKTOP_VARIANTS.filter(v => {
+    const apps = v.apps || [v.app];
+    const dataDirs = v.dataDirs || [v.dataDir];
+    const ides = v.ides || [v.ide];
+    const installed = apps.some(app => fs.existsSync(app)) || dataDirs.some(dataDir => fs.existsSync(dataDir));
+    const running = runningIdes.some(r => ides.some(ide => r === ide || r.includes(ide)));
     return installed && !running;
   });
 
@@ -304,11 +317,18 @@ allChats.sort((a, b) => (b.lastUpdatedAt || b.createdAt || 0) - (a.lastUpdatedAt
 const bySource = {};
 for (const chat of allChats) bySource[chat.source] = (bySource[chat.source] || 0) + 1;
 
-const displayList = Object.entries(editorLabels)
-  .map(([src, label]) => [src, label, bySource[src] || 0])
-  .sort((a, b) => b[2] - a[2]);
+const displayByLabel = new Map();
+for (const [src, label] of Object.entries(editorLabels)) {
+  const existing = displayByLabel.get(label) || { label, count: 0 };
+  existing.count += bySource[src] || 0;
+  displayByLabel.set(label, existing);
+}
 
-for (const [src, label, count] of displayList) {
+const displayList = Array.from(displayByLabel.values())
+  .map(({ label, count }) => [label, count])
+  .sort((a, b) => b[1] - a[1]);
+
+for (const [label, count] of displayList) {
   if (count > 0) {
     console.log(`  ${chalk.green('✓')} ${chalk.bold(label.padEnd(18))} ${chalk.dim(`${count} session${count === 1 ? '' : 's'}`)}`);
   } else {
@@ -344,7 +364,7 @@ const BOT_STYLES = [
     console.log(chalk.dim('      • Copilot      – ~/.config/github-copilot/apps.json'));
     console.log(chalk.dim('      • VS Code      – ~/.config/github-copilot/apps.json'));
     console.log(chalk.dim('      • Codex        – local auth.json (JWT decode only)'));
-    console.log(chalk.dim('      • Windsurf     – local SQLite (state.vscdb)'));
+    console.log(chalk.dim('      • Devin        – local SQLite (state.vscdb)'));
     console.log('');
     console.log(chalk.dim('    These tokens are used to query each editor\'s own API for'));
     console.log(chalk.dim('    your plan name and usage limits.'));

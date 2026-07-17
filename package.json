@@ -1,7 +1,7 @@
 {
   "name": "agentlytics",
-  "version": "0.2.11",
-  "description": "Comprehensive analytics dashboard for AI coding agents — Cursor, Windsurf, Claude Code, VS Code Copilot, Zed, Antigravity, OpenCode, Command Code",
+  "version": "0.2.13",
+  "description": "Comprehensive analytics dashboard for AI coding agents — Cursor, Devin, Claude Code, VS Code Copilot, Zed, Antigravity, OpenCode, Command Code",
   "main": "index.js",
   "bin": {
     "agentlytics": "./index.js"
@@ -23,9 +23,8 @@
     "ui/package-lock.json",
     "ui/vite.config.js",
     "ui/eslint.config.js",
-    "README.md",
-    "mod.ts",
-    "deno.json"
+    "public/",
+    "README.md"
   ],
   "scripts": {
     "start": "node index.js",
@@ -34,7 +33,8 @@
   },
   "keywords": [
     "cursor",
-    "windsurf",
+    "devin",
+    "devin-desktop",
     "claude",
     "vscode",
     "copilot",

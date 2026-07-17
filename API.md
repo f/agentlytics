@@ -7,7 +7,7 @@ Agentlytics exposes a read-only REST API at `http://localhost:4637`. All endpoin
 Dashboard summary with KPIs, editor breakdown, mode distribution, monthly trend, and top projects.
 
 **Query params:**
-- `editor` — filter by editor source ID (e.g. `cursor`, `windsurf`)
+- `editor` — filter by editor source ID (e.g. `cursor`, `devin`, `devin-next`)
 
 **Response:**
 
@@ -15,7 +15,7 @@ Dashboard summary with KPIs, editor breakdown, mode distribution, monthly trend,
 {
   "totalSessions": 660,
   "totalProjects": 45,
-  "editors": { "cursor": 320, "windsurf": 180, "claude-code": 160 },
+  "editors": { "cursor": 320, "devin": 120, "devin-next": 60, "claude-code": 160 },
   "modes": { "agent": 500, "chat": 100, "edit": 60 },
   "monthlyTrend": [{ "month": "2025-01", "count": 80 }],
   "topProjects": [{ "folder": "/Users/dev/Code/myapp", "count": 45 }],

@@ -158,7 +158,7 @@ function ConfirmModal({ enabling, saving, onConfirm, onCancel }) {
                 <li>Cursor &ndash; local SQLite (state.vscdb)</li>
                 <li>Copilot / VS Code &ndash; ~/.config/github-copilot/apps.json</li>
                 <li>Codex &ndash; local auth.json (JWT decode only)</li>
-                <li>Windsurf &ndash; local SQLite (state.vscdb)</li>
+                <li>Devin &ndash; local SQLite (state.vscdb)</li>
               </ul>
               <p style={{ color: 'var(--c-text2)' }}>Tokens are kept <strong>in-memory only</strong> and never sent to any third-party service.</p>
             </>

@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, Download, Send, Search } from 'lucide-react'
 import { fetchChat, BASE } from '../lib/api'
 import { editorColor, editorLabel, formatDateTime, formatNumber } from '../lib/constants'
 import MessageContent, { ROLE_CONFIG } from './MessageRenderer'
+import TokenTimeline from './TokenTimeline'
 
 export default function ChatSidebar({ chatId, onClose, fetchFn, extraHeader, username }) {
   const [chat, setChat] = useState(null)
@@ -46,6 +47,17 @@ export default function ChatSidebar({ chatId, onClose, fetchFn, extraHeader, use
   useEffect(() => {
     setMsgFilter('')
   }, [chatId])
+
+  const handleScrollToMessage = useCallback((msgIndex) => {
+    if (!scrollRef.current) return
+    const el = scrollRef.current.querySelector(`[data-msg-index="${msgIndex}"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.style.outline = '1.5px solid var(--c-accent)'
+      el.style.outlineOffset = '2px'
+      setTimeout(() => { el.style.outline = 'none' }, 1500)
+    }
+  }, [])
 
   if (!chatId) return null
 
@@ -107,12 +119,29 @@ export default function ChatSidebar({ chatId, onClose, fetchFn, extraHeader, use
             {chat.stats.toolCalls?.length > 0 && <span>{chat.stats.toolCalls.length} tools</span>}
             {chat.stats.totalInputTokens > 0 && <span>{formatNumber(chat.stats.totalInputTokens)} in</span>}
             {chat.stats.totalOutputTokens > 0 && <span>{formatNumber(chat.stats.totalOutputTokens)} out</span>}
+            {chat.createdAt && chat.lastUpdatedAt && (() => {
+              const ms = new Date(chat.lastUpdatedAt).getTime() - new Date(chat.createdAt).getTime()
+              if (ms <= 0) return null
+              const mins = Math.floor(ms / 60000)
+              const label = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`
+              return <span>{label}</span>
+            })()}
             {chat.stats.models?.length > 0 && (
               <span className="ml-auto font-mono truncate" style={{ color: 'var(--c-accent)', opacity: 0.7 }}>
                 {[...new Set(chat.stats.models)].join(', ')}
               </span>
             )}
           </div>
+        )}
+
+        {/* Token Timeline */}
+        {chat && chat.messages.length > 0 && (
+          <TokenTimeline
+            messages={chat.messages}
+            createdAt={chat.createdAt}
+            lastUpdatedAt={chat.lastUpdatedAt}
+            onScrollToMessage={handleScrollToMessage}
+          />
         )}
 
         {/* Search bar */}
@@ -148,7 +177,7 @@ export default function ChatSidebar({ chatId, onClose, fetchFn, extraHeader, use
               const cfg = ROLE_CONFIG[msg.role] || ROLE_CONFIG.system
               const Icon = cfg.icon
               return (
-                <div key={i} className="rounded-r px-3 py-2" style={{ borderLeft: `2px solid ${cfg.borderColor}`, background: cfg.bg }}>
+                <div key={i} data-msg-index={i} className="rounded-r px-3 py-2" style={{ borderLeft: `2px solid ${cfg.borderColor}`, background: cfg.bg, transition: 'outline 0.3s' }}>
                   <div className="flex items-center gap-1.5 text-[11px] mb-1" style={{ color: 'var(--c-text2)' }}>
                     <Icon size={11} />
                     <span className="font-medium">{msg.role === 'user' && (username || chat?.username) ? (username || chat.username) : cfg.label}</span>
