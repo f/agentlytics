@@ -2,8 +2,43 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-const CLAUDE_DIR = path.join(os.homedir(), '.claude');
-const PROJECTS_DIR = path.join(CLAUDE_DIR, 'projects');
+function discoverClaudeDirs() {
+  const home = os.homedir();
+  const seen = new Set();
+  const dirs = [];
+
+  function addDir(d) {
+    let real;
+    try { real = fs.realpathSync(d); } catch { return; }
+    if (seen.has(real)) return;
+    seen.add(real);
+    dirs.push(d);
+  }
+
+  addDir(path.join(home, '.claude'));
+
+  let entries;
+  try { entries = fs.readdirSync(home); } catch { entries = []; }
+  for (const entry of entries) {
+    if (!entry.startsWith('.')) continue;
+    const full = path.join(home, entry);
+    try {
+      if (!fs.statSync(full).isDirectory()) continue;
+      const hasProjects = fs.existsSync(path.join(full, 'projects')) && fs.statSync(path.join(full, 'projects')).isDirectory();
+      const hasHistory = fs.existsSync(path.join(full, 'history.jsonl'));
+      if (hasProjects && hasHistory) addDir(full);
+    } catch { /* skip */ }
+  }
+
+  const envDir = process.env.CLAUDE_CONFIG_DIR;
+  if (envDir) {
+    try {
+      if (fs.existsSync(envDir) && fs.statSync(envDir).isDirectory()) addDir(envDir);
+    } catch { /* skip */ }
+  }
+
+  return dirs;
+}
 
 // ============================================================
 // Adapter interface
@@ -13,36 +48,84 @@ const name = 'claude';
 
 function getChats() {
   const chats = [];
-  if (!fs.existsSync(PROJECTS_DIR)) return chats;
+  const seenIds = new Set();
 
-  for (const projDir of fs.readdirSync(PROJECTS_DIR)) {
-    const dir = path.join(PROJECTS_DIR, projDir);
-    if (!fs.statSync(dir).isDirectory()) continue;
+  for (const claudeDir of discoverClaudeDirs()) {
+    const projectsDir = path.join(claudeDir, 'projects');
+    if (!fs.existsSync(projectsDir)) continue;
 
-    // Decode folder path from dir name (e.g. -Users-fka-Code-foo -> /Users/fka/Code/foo)
-    const decodedFolder = projDir.replace(/-/g, '/');
+    for (const projDir of fs.readdirSync(projectsDir)) {
+      const dir = path.join(projectsDir, projDir);
+      if (!fs.statSync(dir).isDirectory()) continue;
 
-    // Read sessions-index.json for indexed sessions
-    const indexPath = path.join(dir, 'sessions-index.json');
-    const indexed = new Map();
-    try {
-      const index = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
-      for (const entry of index.entries || []) {
-        indexed.set(entry.sessionId, entry);
+      // Decode folder path from dir name (e.g. -Users-fka-Code-foo -> /Users/fka/Code/foo)
+      const decodedFolder = projDir.replace(/-/g, '/');
+
+      // Read sessions-index.json for indexed sessions
+      const indexPath = path.join(dir, 'sessions-index.json');
+      const indexed = new Map();
+      try {
+        const index = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
+        for (const entry of index.entries || []) {
+          indexed.set(entry.sessionId, entry);
+        }
+      } catch { /* no index */ }
+
+      // Scan all .jsonl files on disk (some may not be in the index)
+      let files;
+      try { files = fs.readdirSync(dir).filter(f => f.endsWith('.jsonl')); } catch { continue; }
+
+      for (const file of files) {
+        const sessionId = file.replace('.jsonl', '');
+        if (seenIds.has(sessionId)) { indexed.delete(sessionId); continue; }
+        const fullPath = path.join(dir, file);
+        const entry = indexed.get(sessionId);
+
+        if (entry) {
+          // Use index metadata
+          seenIds.add(sessionId);
+          chats.push({
+            source: 'claude-code',
+            composerId: sessionId,
+            name: cleanPrompt(entry.firstPrompt),
+            createdAt: entry.created ? new Date(entry.created).getTime() : null,
+            lastUpdatedAt: entry.modified ? new Date(entry.modified).getTime() : null,
+            mode: 'claude',
+            folder: entry.projectPath || decodedFolder,
+            encrypted: false,
+            bubbleCount: entry.messageCount || 0,
+            _fullPath: fullPath,
+            _gitBranch: entry.gitBranch,
+          });
+        } else {
+          // Orphan .jsonl — extract metadata from file content
+          try {
+            const stat = fs.statSync(fullPath);
+            const meta = peekSessionMeta(fullPath);
+            seenIds.add(sessionId);
+            chats.push({
+              source: 'claude-code',
+              composerId: sessionId,
+              name: meta.firstPrompt ? cleanPrompt(meta.firstPrompt) : null,
+              createdAt: meta.timestamp || stat.birthtime.getTime(),
+              lastUpdatedAt: stat.mtime.getTime(),
+              mode: 'claude',
+              folder: meta.cwd || decodedFolder,
+              encrypted: false,
+              _fullPath: fullPath,
+            });
+          } catch { /* skip */ }
+        }
+
+        // Remove from indexed so we know what's left
+        indexed.delete(sessionId);
       }
-    } catch { /* no index */ }
 
-    // Scan all .jsonl files on disk (some may not be in the index)
-    let files;
-    try { files = fs.readdirSync(dir).filter(f => f.endsWith('.jsonl')); } catch { continue; }
-
-    for (const file of files) {
-      const sessionId = file.replace('.jsonl', '');
-      const fullPath = path.join(dir, file);
-      const entry = indexed.get(sessionId);
-
-      if (entry) {
-        // Use index metadata
+      // Add indexed sessions whose .jsonl files no longer exist (show as unavailable)
+      for (const [sessionId, entry] of indexed) {
+        if (seenIds.has(sessionId)) continue;
+        if (!entry.fullPath || !fs.existsSync(entry.fullPath)) continue;
+        seenIds.add(sessionId);
         chats.push({
           source: 'claude-code',
           composerId: sessionId,
@@ -53,47 +136,9 @@ function getChats() {
           folder: entry.projectPath || decodedFolder,
           encrypted: false,
           bubbleCount: entry.messageCount || 0,
-          _fullPath: fullPath,
-          _gitBranch: entry.gitBranch,
+          _fullPath: entry.fullPath,
         });
-      } else {
-        // Orphan .jsonl — extract metadata from file content
-        try {
-          const stat = fs.statSync(fullPath);
-          const meta = peekSessionMeta(fullPath);
-          chats.push({
-            source: 'claude-code',
-            composerId: sessionId,
-            name: meta.firstPrompt ? cleanPrompt(meta.firstPrompt) : null,
-            createdAt: meta.timestamp || stat.birthtime.getTime(),
-            lastUpdatedAt: stat.mtime.getTime(),
-            mode: 'claude',
-            folder: meta.cwd || decodedFolder,
-            encrypted: false,
-            _fullPath: fullPath,
-          });
-        } catch { /* skip */ }
       }
-
-      // Remove from indexed so we know what's left
-      indexed.delete(sessionId);
-    }
-
-    // Add indexed sessions whose .jsonl files no longer exist (show as unavailable)
-    for (const [sessionId, entry] of indexed) {
-      if (!entry.fullPath || !fs.existsSync(entry.fullPath)) continue;
-      chats.push({
-        source: 'claude-code',
-        composerId: sessionId,
-        name: cleanPrompt(entry.firstPrompt),
-        createdAt: entry.created ? new Date(entry.created).getTime() : null,
-        lastUpdatedAt: entry.modified ? new Date(entry.modified).getTime() : null,
-        mode: 'claude',
-        folder: entry.projectPath || decodedFolder,
-        encrypted: false,
-        bubbleCount: entry.messageCount || 0,
-        _fullPath: entry.fullPath,
-      });
     }
   }
 
@@ -317,9 +362,14 @@ function getArtifacts(folder) {
 function getMCPServers() {
   const { parseMcpConfigFile } = require('./base');
   const results = [];
-  // Global: ~/.claude.json (has mcpServers key)
-  const globalFile = path.join(os.homedir(), '.claude.json');
-  results.push(...parseMcpConfigFile(globalFile, { editor: 'claude-code', label: 'Claude Code', scope: 'global' }));
+  const seenFiles = new Set();
+  // Global: <configDir>.json sibling for each discovered claude dir (e.g. ~/.claude -> ~/.claude.json)
+  for (const claudeDir of discoverClaudeDirs()) {
+    const jsonFile = path.join(path.dirname(claudeDir), path.basename(claudeDir) + '.json');
+    if (seenFiles.has(jsonFile)) continue;
+    seenFiles.add(jsonFile);
+    results.push(...parseMcpConfigFile(jsonFile, { editor: 'claude-code', label: 'Claude Code', scope: 'global' }));
+  }
   // Project-level: .mcp.json (scanned per-project later via getAllMCPServers)
   return results;
 }
