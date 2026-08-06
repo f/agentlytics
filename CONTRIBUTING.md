@@ -165,6 +165,23 @@ Reads from `~/.local/share/opencode/opencode.db`:
 - SQLite database with `session`, `message`, and `project` tables
 - Messages queried directly via SQL with full content, model, and token data
 
+### Grok (Grok CLI / Grok Build)
+
+Reads from `${GROK_HOME:-~/.grok}/sessions/<url-encoded-cwd>/<session-id>/`:
+- `summary.json` — session metadata: `info.id`, `info.cwd`, titles, timestamps, `current_model_id`, `agent_name`, message counts
+- `chat_history.jsonl` — transcript lines with `type` of `system` | `user` | `assistant` | `tool_result` | `reasoning` | `backend_tool_call`
+- `updates.jsonl` — stream updates; `sessionUpdate: "turn_completed"` carries per-turn token usage (`inputTokens`, `outputTokens`, `cachedReadTokens`, `cacheCreationTokens`, `modelUsage`)
+
+Adapter behavior:
+- Titles prefer `generated_title` / `session_summary`, else the first real user prompt
+- Synthetic user envelopes (`synthetic_reason`, pure `<user_info>` / `<system-reminder>`) and the large system prompt are skipped
+- `<user_query>` tags are unwrapped for cleaner transcript text
+- Assistant `tool_calls` populate `_toolCalls`; `tool_result` lines become `role: 'tool'`
+- Reasoning summaries render as `[thinking] ...`
+- Per-turn usage from `turn_completed` is attached to the last assistant message of each user turn
+- MCP servers are discovered from `[mcp_servers.*]` tables in `~/.grok/config.toml`
+- Project artifacts: `AGENTS.md`, `.grok/config.toml`, `.grok/rules/`, `.grok/skills/`, `.grok/workflows/`
+
 ---
 
 ## Database Schema

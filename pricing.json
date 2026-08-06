@@ -395,6 +395,30 @@
     "cacheRead": 0.75,
     "cacheWrite": 3
   },
+  "grok-4-5": {
+    "input": 3,
+    "output": 15,
+    "cacheRead": 0.75,
+    "cacheWrite": 3
+  },
+  "grok-4-5-build": {
+    "input": 3,
+    "output": 15,
+    "cacheRead": 0.75,
+    "cacheWrite": 3
+  },
+  "grok-4.5": {
+    "input": 3,
+    "output": 15,
+    "cacheRead": 0.75,
+    "cacheWrite": 3
+  },
+  "grok-4.5-build": {
+    "input": 3,
+    "output": 15,
+    "cacheRead": 0.75,
+    "cacheWrite": 3
+  },
   "grok-4-1-fast": {
     "input": 0.2,
     "output": 0.5,

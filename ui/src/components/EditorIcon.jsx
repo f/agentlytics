@@ -63,6 +63,7 @@ const EDITOR_ICONS = {
   'commandcode': 'command',
   'goose': 'goose',
   'kiro': 'kiro',
+  'grok': 'terminal',
 }
 
 export default function EditorIcon({ source, size = 16, className = '' }) {

@@ -18,6 +18,7 @@ export const EDITOR_COLORS = {
   'goose': '#333333',
   'kiro': '#9046FF',
   'codebuff': '#44ff00',
+  'grok': '#1DA1F2',
 };
 
 export const EDITOR_LABELS = {
@@ -40,6 +41,7 @@ export const EDITOR_LABELS = {
   'goose': 'Goose',
   'kiro': 'Kiro',
   'codebuff': 'Codebuff',
+  'grok': 'Grok',
 };
 
 export function editorColor(src) {
