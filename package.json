@@ -1,7 +1,7 @@
 {
   "name": "agentlytics",
   "version": "0.2.13",
-  "description": "Comprehensive analytics dashboard for AI coding agents — Cursor, Devin, Claude Code, VS Code Copilot, Zed, Antigravity, OpenCode, Command Code",
+  "description": "Comprehensive analytics dashboard for AI coding agents — Cursor, Devin, Claude Code, VS Code Copilot, Zed, Antigravity, OpenCode, Command Code, Grok",
   "main": "index.js",
   "bin": {
     "agentlytics": "./index.js"
@@ -42,6 +42,8 @@
     "antigravity",
     "opencode",
     "codex",
+    "grok",
+    "xai",
     "analytics",
     "ai",
     "agent"
