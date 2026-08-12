@@ -148,3 +148,6 @@ public/assets/
 public/index.html
 
 .DS_Store
+
+# JetBrains IDEs
+.idea/

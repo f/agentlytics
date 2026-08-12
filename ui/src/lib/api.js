@@ -234,6 +234,15 @@ export async function fetchMCPs() {
   return res.json();
 }
 
+// ── Suggestions API ──
+
+export async function fetchSuggestions(editor) {
+  const q = new URLSearchParams();
+  if (editor) q.set('editor', editor);
+  const res = await fetch(`${BASE}/api/suggestions?${q}`);
+  return res.json();
+}
+
 // ── GSD API ──
 
 export async function fetchGSDProjects() {

@@ -1,6 +1,6 @@
 {
-  "name": "agentlytics",
-  "version": "0.2.13",
+  "name": "@shlomobam/agentlytics",
+  "version": "0.2.14-suggestions.2",
   "description": "Comprehensive analytics dashboard for AI coding agents — Cursor, Devin, Claude Code, VS Code Copilot, Zed, Antigravity, OpenCode, Command Code",
   "main": "index.js",
   "bin": {
@@ -16,6 +16,7 @@
     "mcp-server.js",
     "pricing.js",
     "pricing.json",
+    "suggestions/",
     "editors/",
     "ui/src/",
     "ui/index.html",
@@ -29,7 +30,9 @@
   "scripts": {
     "start": "node index.js",
     "build": "cd ui && npm install && npm run build",
-    "dev": "cd ui && npm run dev"
+    "dev": "cd ui && npm run dev",
+    "test": "node --test test/**/*.test.js",
+    "prepare": "npm run build"
   },
   "keywords": [
     "cursor",
@@ -49,11 +52,11 @@
   "author": "fkadev",
   "license": "ISC",
   "engines": {
-    "node": ">=20.19.0"
+    "node": "^20.19.0 || ^22.12.0 || ^24.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/f/agentlytics"
+    "url": "https://github.com/shlomobamberger/agentlytics"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",

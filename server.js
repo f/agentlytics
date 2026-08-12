@@ -216,6 +216,16 @@ app.get('/api/costs', (req, res) => {
   }
 });
 
+app.get('/api/suggestions', (req, res) => {
+  try {
+    const editor = req.query.editor || 'cursor';
+    const { runForEditor } = require('./suggestions');
+    res.json(runForEditor(editor));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/tool-calls', (req, res) => {
   try {
     const name = req.query.name;

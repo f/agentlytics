@@ -435,4 +435,262 @@ function getMCPServers() {
   ];
 }
 
-module.exports = { name, labels, getChats, getMessages, getUsage, getArtifacts, getMCPServers };
+// ============================================================
+// Config inspection (for suggestions engine)
+// ============================================================
+
+function parseRuleFrontmatter(raw) {
+  // Cursor .mdc format: YAML-ish frontmatter between leading '---' fences.
+  // Supports scalar values and folded/literal block scalars (`>`, `>-`, `|`, `|-`).
+  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  if (!m) return { frontmatter: {}, body: raw };
+  const fm = {};
+  const lines = m[1].split(/\r?\n/);
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const kv = line.match(/^\s*([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$/);
+    if (!kv) { i++; continue; }
+    const key = kv[1];
+    let raw = kv[2].trim();
+
+    // Block scalar: collect continuation lines indented further than the key line
+    if (/^[>|][-+]?\s*$/.test(raw)) {
+      const folded = raw.startsWith('>');
+      const keyIndent = line.match(/^(\s*)/)[1].length;
+      const parts = [];
+      i++;
+      while (i < lines.length) {
+        const l = lines[i];
+        if (l.trim() === '') { parts.push(''); i++; continue; }
+        const indent = l.match(/^(\s*)/)[1].length;
+        if (indent <= keyIndent) break;
+        parts.push(l.slice(indent));
+        i++;
+      }
+      fm[key] = folded ? parts.join(' ').replace(/\s+/g, ' ').trim() : parts.join('\n').trim();
+      continue;
+    }
+
+    // Scalar: strip quotes, coerce booleans/null/empty
+    let v = raw;
+    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+      v = v.slice(1, -1);
+    }
+    if (v === 'true') v = true;
+    else if (v === 'false') v = false;
+    else if (v === 'null' || v === '') v = null;
+    fm[key] = v;
+    i++;
+  }
+  return { frontmatter: fm, body: m[2] };
+}
+
+function scanRulesDir(dir) {
+  const rules = [];
+  if (!fs.existsSync(dir)) return rules;
+  // Recurse one level — Cursor supports nested rules dirs
+  const stack = [dir];
+  while (stack.length) {
+    const d = stack.pop();
+    let entries;
+    try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
+    for (const e of entries) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) stack.push(p);
+      else if (e.isFile() && e.name.endsWith('.mdc')) {
+        try {
+          const raw = fs.readFileSync(p, 'utf-8');
+          const { frontmatter, body } = parseRuleFrontmatter(raw);
+          rules.push({
+            path: p,
+            filename: e.name,
+            description: frontmatter.description || null,
+            globs: frontmatter.globs || null,
+            alwaysApply: frontmatter.alwaysApply === true,
+            bodyChars: body.length,
+            bodyTokens: Math.ceil(body.length / 4),
+          });
+        } catch { /* skip unreadable rule */ }
+      }
+    }
+  }
+  return rules;
+}
+
+function scanSkillsDir(dir) {
+  const skills = [];
+  if (!fs.existsSync(dir)) return skills;
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return skills; }
+  for (const e of entries) {
+    if (!e.isDirectory()) continue;
+    const skillMd = path.join(dir, e.name, 'SKILL.md');
+    if (!fs.existsSync(skillMd)) continue;
+    try {
+      const raw = fs.readFileSync(skillMd, 'utf-8');
+      const { frontmatter, body } = parseRuleFrontmatter(raw);
+      skills.push({
+        path: skillMd,
+        name: e.name,
+        skillName: frontmatter.name || null,
+        description: frontmatter.description || null,
+        disableModelInvocation: frontmatter['disable-model-invocation'] === true || frontmatter['disable-model-invocation'] === 'true',
+        bodyChars: body.length,
+        bodyLines: body ? body.split('\n').length : 0,
+        bodyTokens: Math.ceil(body.length / 4),
+      });
+    } catch { /* skip */ }
+  }
+  return skills;
+}
+
+function readCursorrules(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    return { path: filePath, bodyChars: raw.length, bodyTokens: Math.ceil(raw.length / 4) };
+  } catch { return null; }
+}
+
+function readCliConfig() {
+  const p = path.join(HOME, '.cursor', 'cli-config.json');
+  if (!fs.existsSync(p)) return null;
+  try {
+    const data = JSON.parse(fs.readFileSync(p, 'utf-8'));
+    return {
+      path: p,
+      modelId: data.model?.modelId || null,
+      displayName: data.model?.displayName || null,
+      maxMode: data.maxMode || data.model?.maxMode || false,
+      approvalMode: data.approvalMode || null,
+      sandboxMode: data.sandbox?.mode || null,
+      hasChangedDefaultModel: data.hasChangedDefaultModel || false,
+    };
+  } catch { return null; }
+}
+
+/**
+ * Return a structured snapshot of Cursor's configuration — both global
+ * (user-level) and per-project — suitable for the suggestions analyzer.
+ *
+ * @param {string[]} projectFolders - Absolute folder paths to inspect
+ */
+// Walk Cursor's per-project MCP tool cache. Cursor stores every discovered
+// MCP tool's full JSON schema (name, description, args schema) at
+// `~/.cursor/projects/<project-key>/mcps/<server-key>/tools/<tool>.json`.
+// That file content is what actually gets loaded into the model's system
+// prompt on every turn — so file size is a direct proxy for context tokens.
+// We aggregate across all project-keys, grouping by normalized server name.
+function scanMcpToolSchemaCache() {
+  const byServer = new Map(); // serverName → Map<toolName, { chars, tokens, description }>
+  const projectsRoot = path.join(HOME, '.cursor', 'projects');
+  if (!fs.existsSync(projectsRoot)) return byServer;
+  let projectDirs;
+  try { projectDirs = fs.readdirSync(projectsRoot, { withFileTypes: true }); } catch { return byServer; }
+  for (const p of projectDirs) {
+    if (!p.isDirectory()) continue;
+    const mcpsDir = path.join(projectsRoot, p.name, 'mcps');
+    if (!fs.existsSync(mcpsDir)) continue;
+    let serverDirs;
+    try { serverDirs = fs.readdirSync(mcpsDir, { withFileTypes: true }); } catch { continue; }
+    for (const s of serverDirs) {
+      if (!s.isDirectory()) continue;
+      // Server key format: "user-<name>" (global), "plugin-<name>-<name>" (plugin),
+      // etc. Strip the prefix so findings match the server name users see.
+      // Normalize case. Cursor's per-project cache can use different casings
+      // for the same server (e.g. "user-Atlassian" vs "user-atlassian") —
+      // treat them as one.
+      const serverName = s.name.replace(/^user-/, '').replace(/^plugin-[^-]+-/, '').toLowerCase();
+      const toolsDir = path.join(mcpsDir, s.name, 'tools');
+      if (!fs.existsSync(toolsDir)) continue;
+      let toolFiles;
+      try { toolFiles = fs.readdirSync(toolsDir); } catch { continue; }
+      if (!byServer.has(serverName)) byServer.set(serverName, new Map());
+      const entry = byServer.get(serverName);
+      for (const f of toolFiles) {
+        if (!f.endsWith('.json')) continue;
+        try {
+          const raw = fs.readFileSync(path.join(toolsDir, f), 'utf-8');
+          const json = JSON.parse(raw);
+          const toolName = json.name || f.replace(/\.json$/, '');
+          // Prefer the largest schema we've seen for this tool (same tool
+          // can appear under several project keys; schemas should be
+          // identical but take the max to be safe).
+          const chars = raw.length;
+          const prev = entry.get(toolName);
+          if (!prev || prev.chars < chars) {
+            entry.set(toolName, {
+              chars,
+              tokens: Math.ceil(chars / 4),
+              description: json.description || '',
+            });
+          }
+        } catch { /* skip malformed */ }
+      }
+    }
+  }
+  return byServer;
+}
+
+function getConfig(projectFolders = []) {
+  const global = {
+    mcpServers: getMCPServers(),
+    skills: scanSkillsDir(path.join(HOME, '.cursor', 'skills-cursor')),
+    cliConfig: readCliConfig(),
+    mcpToolSchemas: scanMcpToolSchemaCache(),
+  };
+
+  // Cursor loads .cursor/rules/ from the project folder AND from every
+  // ancestor directory up to the filesystem root. Walk upward so rules
+  // defined at a monorepo root are attributed to each subfolder they apply to.
+  function walkUpCursorDirs(start) {
+    const dirs = [];
+    let cur = path.resolve(start);
+    const seenCur = new Set();
+    while (cur && !seenCur.has(cur)) {
+      seenCur.add(cur);
+      dirs.push(cur);
+      const parent = path.dirname(cur);
+      if (parent === cur) break;
+      // Stop at home or root to avoid scanning unrelated system dirs
+      if (cur === HOME || cur === '/') break;
+      cur = parent;
+    }
+    return dirs;
+  }
+
+  const seen = new Set();
+  const projects = [];
+  for (const folder of projectFolders) {
+    if (!folder || seen.has(folder)) continue;
+    if (!fs.existsSync(folder)) continue;
+    seen.add(folder);
+
+    const rulesByPath = new Map();
+    const skillsByPath = new Map();
+    for (const ancestor of walkUpCursorDirs(folder)) {
+      for (const r of scanRulesDir(path.join(ancestor, '.cursor', 'rules'))) {
+        if (!rulesByPath.has(r.path)) rulesByPath.set(r.path, { ...r, sourceFolder: ancestor });
+      }
+      for (const s of scanSkillsDir(path.join(ancestor, '.cursor', 'skills'))) {
+        if (!skillsByPath.has(s.path)) skillsByPath.set(s.path, { ...s, sourceFolder: ancestor });
+      }
+    }
+    const rules = Array.from(rulesByPath.values());
+    const skills = Array.from(skillsByPath.values());
+    const legacy = readCursorrules(path.join(folder, '.cursorrules'));
+    const { parseMcpConfigFile } = require('./base');
+    const mcpServers = parseMcpConfigFile(
+      path.join(folder, '.cursor', 'mcp.json'),
+      { editor: 'cursor', label: 'Cursor', scope: 'project' }
+    ).map(s => ({ ...s, projectFolder: folder }));
+    if (rules.length || skills.length || legacy || mcpServers.length) {
+      projects.push({ folder, rules, skills, legacyCursorrules: legacy, mcpServers });
+    }
+  }
+
+  return { global, projects };
+}
+
+module.exports = { name, labels, getChats, getMessages, getUsage, getArtifacts, getMCPServers, getConfig };

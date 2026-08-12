@@ -12,7 +12,7 @@ const [nodeMajor, nodeMinor] = nodeVersion.split('.').map(Number);
 const isNodeSupported =
   (nodeMajor === 20 && nodeMinor >= 19) ||
   (nodeMajor === 22 && nodeMinor >= 12) ||
-  nodeMajor === 23 || nodeMajor === 24 || nodeMajor >= 25;
+  nodeMajor === 24;
 
 if (!isNodeSupported) {
   console.error('');

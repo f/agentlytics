@@ -47,7 +47,15 @@ yarn dlx agentlytics
 bunx agentlytics
 ```
 
-Opens at **http://localhost:4637**. Requires Node.js ≥ 20.19 or ≥ 22.12, macOS. No data ever leaves your machine.
+### Install the Suggestions preview
+
+Install the preview package directly from npm:
+
+```bash
+npx -y @shlomobam/agentlytics@suggestions
+```
+
+Opens at **http://localhost:4637**. Requires Node.js 20.19+, 22.12+, or 24.x, macOS. No data ever leaves your machine.
 
 ### Node.js
 
@@ -86,6 +94,7 @@ npx agentlytics --collect
 - **Costs** — Estimate your AI spend broken down by model, editor, project, and month. Spot your most expensive sessions.
 - **Projects** — Per-project analytics: sessions, messages, tokens, models, editor breakdown, and drill-down detail views
 - **Deep Analysis** — Tool frequency heatmaps, model distribution, token breakdown, and filterable drill-down analytics
+- **Suggestions** — Local configuration hygiene checks for Cursor and Claude Code: MCP tool-schema context estimates, unused tool detection, oversized rules/skills, and fix guidance
 - **Compare** — Side-by-side editor comparison with efficiency ratios, token usage, and session patterns
 - **Subscriptions** — Live view of your editor plans, usage quotas, remaining credits, and rate limits across Cursor, Devin, Claude Code, Copilot, Codex, and more
 - **Relay** — Share AI session context across your team via MCP
