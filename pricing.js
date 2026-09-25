@@ -21,7 +21,7 @@ function normalizeModelName(name) {
   if (dotParts.length > 1) {
     const prefixes = dotParts.slice(0, -1);
     const last = dotParts[dotParts.length - 1];
-    if (last.includes('-') && prefixes.every(p => !p.includes('-'))) n = last;
+    if (/^[a-z]/.test(last) && last.includes('-') && prefixes.every(p => !p.includes('-'))) n = last;
   }
 
   // Handle MODEL_CLAUDE_* / MODEL_GPT_* enum constants
@@ -36,8 +36,8 @@ function normalizeModelName(name) {
   // Rearrange reversed claude names: "claude-4-6-opus-..." → "claude-opus-4-6"
   // Run on all candidates so dots→dashes variant is also checked
   for (const c of [...candidates]) {
-    const rev = c.match(/^(claude)-(\d+)-(\d+)-(opus|sonnet|haiku)/);
-    if (rev) candidates.push(`${rev[1]}-${rev[4]}-${rev[2]}-${rev[3]}`);
+    const rev = c.match(/^(claude)-(\d+)(?:-(\d+))?-(opus|sonnet|haiku)/);
+    if (rev) candidates.push(`${rev[1]}-${rev[4]}-${rev[2]}-${rev[3] || '0'}`);
   }
 
   // Pass 1: exact and precise matches across ALL candidates first
