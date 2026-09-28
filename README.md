@@ -112,7 +112,7 @@ npx agentlytics --collect
 | **Kiro** | ✅ | ✅ | ✅ | ❌ |
 | **Codebuff** | ✅ | ✅ | ⚠️ | ⚠️ |
 
-> Devin, Devin Next, and Antigravity must be running during scan.
+> Devin, Devin Next, and Antigravity must be running during scan for Cascade sessions. Devin local-agent sessions (the `devin` CLI and the IDE's built-in agent) are read from `~/.local/share/devin/cli/sessions.db` and do not require the app to be running.
 
 ## Relay
 

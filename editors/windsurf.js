@@ -2,6 +2,7 @@ const { execSync, execFileSync } = require('child_process');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const devinCli = require('./devin-cli');
 
 // Devin variants. Keep legacy Windsurf identifiers only for detection/config compatibility.
 const VARIANTS = [
@@ -218,6 +219,10 @@ const legacySources = ['windsurf', 'windsurf-next'];
 
 function getChats() {
   const chats = [];
+
+  // Devin's local agent (CLI and IDE-hosted via ACP) writes to a SQLite store
+  // instead of Cascade; those sessions are part of the 'devin' source too.
+  try { chats.push(...devinCli.getChats()); } catch { /* store missing or unreadable */ }
 
   for (const variant of VARIANTS) {
     const ls = getLsForVariant(variant);
@@ -445,6 +450,7 @@ function parseStep(step) {
 }
 
 function getMessages(chat) {
+  if (devinCli.isCliChat(chat)) return devinCli.getMessages(chat);
   const steps = getSteps(chat);
   const messages = [];
   for (const step of steps) {
@@ -624,6 +630,7 @@ function getMCPServers() {
     { file: path.join(os.homedir(), '.windsurf', 'mcp_config.json'), editor: 'devin', label: 'Devin' },
     { file: path.join(os.homedir(), '.codeium', 'windsurf', 'mcp_config.json'), editor: 'devin', label: 'Devin' },
     { file: path.join(os.homedir(), '.codeium', 'windsurf-next', 'mcp_config.json'), editor: 'devin-next', label: 'Devin Next' },
+    { file: devinCli.MCP_CONFIG_PATH, editor: 'devin', label: 'Devin' },
   ];
   for (const c of configs) {
     results.push(...parseMcpConfigFile(c.file, { editor: c.editor, label: c.label, scope: 'global' }));
