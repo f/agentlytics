@@ -111,6 +111,8 @@ npx agentlytics --collect
 | **Goose** | ✅ | ✅ | ✅ | ❌ |
 | **Kiro** | ✅ | ✅ | ✅ | ❌ |
 | **Codebuff** | ✅ | ✅ | ⚠️ | ⚠️ |
+| **Pi** | ✅ | ✅ | ✅ | ✅ |
+| **Oh My Pi** | ✅ | ✅ | ✅ | ✅ |
 
 > Devin, Devin Next, and Antigravity must be running during scan.
 

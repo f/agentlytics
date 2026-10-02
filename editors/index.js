@@ -14,8 +14,9 @@ const commandcode = require('./commandcode');
 const goose = require('./goose');
 const kiro = require('./kiro');
 const codebuff = require('./codebuff');
+const pi = require('./pi');
 
-const editors = [cursor, devin, antigravity, claude, vscode, zed, opencode, codex, gemini, copilot, copilotJetbrains, cursorAgent, commandcode, goose, kiro, codebuff];
+const editors = [cursor, devin, antigravity, claude, vscode, zed, opencode, codex, gemini, copilot, copilotJetbrains, cursorAgent, commandcode, goose, kiro, codebuff, pi];
 
 // Build a unified source → display-label map from all editor modules
 const editorLabels = {};

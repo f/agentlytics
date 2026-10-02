@@ -18,6 +18,8 @@ export const EDITOR_COLORS = {
   'goose': '#333333',
   'kiro': '#9046FF',
   'codebuff': '#44ff00',
+  'pi': '#0ea5e9',
+  'oh-my-pi': '#14b8a6',
 };
 
 export const EDITOR_LABELS = {
@@ -40,6 +42,8 @@ export const EDITOR_LABELS = {
   'goose': 'Goose',
   'kiro': 'Kiro',
   'codebuff': 'Codebuff',
+  'pi': 'Pi',
+  'oh-my-pi': 'Oh My Pi',
 };
 
 export function editorColor(src) {
