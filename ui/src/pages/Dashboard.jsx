@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, X, Flame, Zap, MessageSquare, Wrench, Share2, AlertTriangle, LayoutDashboard } from 'lucide-react'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Filler } from 'chart.js'
 import { Doughnut, Bar, Line } from 'react-chartjs-2'
@@ -26,15 +26,25 @@ const MODE_COLORS = {
   copilot: '#f59e0b', thread: '#ec4899', opencode: '#f43f5e', claude: '#f97316',
 }
 
+function dateRangeFromParams(searchParams) {
+  const from = searchParams.get('from')
+  const to = searchParams.get('to')
+  return from && to ? { from, to } : null
+}
+
 export default function Dashboard({ overview }) {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [dailyData, setDailyData] = useState(null)
   const [filteredData, setFilteredData] = useState(null)
   const [stats, setStats] = useState(null)
-  const [selectedEditor, setSelectedEditor] = useState(null)
-  const [dateRange, setDateRange] = useState(null)
+  const [selectedEditor, setSelectedEditor] = useState(() => searchParams.get('editor'))
+  const [selectedFolder, setSelectedFolder] = useState(() => searchParams.get('folder'))
+  const [dateRange, setDateRange] = useState(() => dateRangeFromParams(searchParams))
   const { dark } = useTheme()
   const [costs, setCosts] = useState(null)
+  const [editorFacet, setEditorFacet] = useState(null)
+  const [projectFacet, setProjectFacet] = useState(null)
   const [shareOpen, setShareOpen] = useState(false)
   const [largeContextChats, setLargeContextChats] = useState(null)
   const [selectedChatId, setSelectedChatId] = useState(null)
@@ -56,35 +66,69 @@ export default function Dashboard({ overview }) {
   }
   const noLegend = { legend: { display: false }, tooltip: { bodyFont: { family: MONO, size: 10 }, titleFont: { family: MONO, size: 10 } } }
 
+  // Keep filters in the URL so they survive reloads and can be shared
   useEffect(() => {
-    const dateParams = dateRangeToApiParams(dateRange)
-    const chatParams = { limit: 500, named: false, ...dateParams }
-    if (selectedEditor) chatParams.editor = selectedEditor
+    const next = new URLSearchParams()
+    if (selectedEditor) next.set('editor', selectedEditor)
+    if (selectedFolder) next.set('folder', selectedFolder)
+    if (dateRange?.from && dateRange?.to) {
+      next.set('from', dateRange.from)
+      next.set('to', dateRange.to)
+    }
+    setSearchParams(next, { replace: true })
+  }, [selectedEditor, selectedFolder, dateRange, setSearchParams])
+
+  useEffect(() => {
+    const filterParams = { ...dateRangeToApiParams(dateRange) }
+    if (selectedEditor) filterParams.editor = selectedEditor
+    if (selectedFolder) filterParams.folder = selectedFolder
+    const chatParams = { limit: 500, named: false, ...filterParams }
 
     fetchChats(chatParams).then(r => {
       const big = (r.chats || []).filter(c => c.bubbleCount >= 100).sort((a, b) => b.bubbleCount - a.bubbleCount)
       setLargeContextChats(big)
     })
 
-    if (!selectedEditor) {
+    if (Object.keys(filterParams).length === 0) {
       setFilteredData(null)
-      fetchDailyActivity(dateParams).then(setDailyData)
-      fetchDashboardStats(dateParams).then(setStats)
-      fetchCosts(dateParams).then(setCosts)
+      fetchDailyActivity({}).then(setDailyData)
+      fetchDashboardStats({}).then(setStats)
+      fetchCosts({}).then(setCosts)
       return
     }
     Promise.all([
-      fetchOverviewApi({ editor: selectedEditor, ...dateParams }),
-      fetchDailyActivity({ editor: selectedEditor, ...dateParams }),
-      fetchDashboardStats({ editor: selectedEditor, ...dateParams }),
-      fetchCosts({ editor: selectedEditor, ...dateParams }),
+      fetchOverviewApi(filterParams),
+      fetchDailyActivity(filterParams),
+      fetchDashboardStats(filterParams),
+      fetchCosts(filterParams),
     ]).then(([ov, daily, st, c]) => {
       setFilteredData(ov)
       setDailyData(daily)
       setStats(st)
       setCosts(c)
     })
-  }, [selectedEditor, dateRange])
+  }, [selectedEditor, selectedFolder, dateRange])
+
+  // Chip counts: editors narrowed by project + date, projects narrowed by editor + date
+  useEffect(() => {
+    let cancelled = false
+    const dateParams = dateRangeToApiParams(dateRange)
+    if (selectedFolder || dateRange) {
+      fetchDailyActivity({ folder: selectedFolder, ...dateParams }).then(days => {
+        const counts = {}
+        for (const day of days) {
+          for (const [src, n] of Object.entries(day.editors)) counts[src] = (counts[src] || 0) + n
+        }
+        if (!cancelled) setEditorFacet(Object.entries(counts).map(([id, count]) => ({ id, count })))
+      })
+    }
+    if (selectedEditor || dateRange) {
+      fetchOverviewApi({ editor: selectedEditor, ...dateParams }).then(ov => {
+        if (!cancelled) setProjectFacet(ov.topProjects)
+      })
+    }
+    return () => { cancelled = true }
+  }, [selectedEditor, selectedFolder, dateRange])
 
   if (!overview) return <AnimatedLoader label="Loading dashboard..." />
 
@@ -94,6 +138,17 @@ export default function Dashboard({ overview }) {
   const thisMonth = d.byMonth.length > 0 ? d.byMonth[d.byMonth.length - 1] : null
   const modes = Object.entries(d.byMode).sort((a, b) => b[1] - a[1])
   const sel = selectedEditor ? allEditors.find(e => e.id === selectedEditor) : null
+  // Each chip row is narrowed by the other filters; the selected chip always stays visible
+  const editorChips = ((selectedFolder || dateRange) && editorFacet ? editorFacet : allEditors)
+    .filter(e => e.count > 0 || e.id === selectedEditor)
+  if (selectedEditor && !editorChips.some(e => e.id === selectedEditor)) editorChips.push({ id: selectedEditor, count: 0 })
+  editorChips.sort((a, b) => b.count - a.count)
+  const projectChips = ((selectedEditor || dateRange) && projectFacet ? projectFacet : overview.topProjects).slice()
+  if (selectedFolder && !projectChips.some(p => p.fullPath === selectedFolder)) projectChips.push({ fullPath: selectedFolder, count: 0 })
+  const sessionsQuery = new URLSearchParams()
+  if (selectedEditor) sessionsQuery.set('editor', selectedEditor)
+  if (selectedFolder) sessionsQuery.set('folder', selectedFolder)
+  const sessionsUrl = sessionsQuery.toString() ? `/sessions?${sessionsQuery}` : '/sessions'
 
   const editorChartData = {
     labels: allEditors.map(e => editorLabel(e.id)),
@@ -194,7 +249,7 @@ export default function Dashboard({ overview }) {
       {/* Editor breakdown - compact row */}
       <div className="card p-3">
         <div className="flex items-center flex-wrap gap-1.5">
-          {allEditors.map(e => {
+          {editorChips.map(e => {
             const isSelected = selectedEditor === e.id
             return (
               <button
@@ -215,12 +270,36 @@ export default function Dashboard({ overview }) {
             )
           })}
         </div>
-        {selectedEditor && sel && (
+        {projectChips.length > 0 && (
+          <div className="mt-1.5 flex items-center flex-wrap gap-1.5">
+            {projectChips.map(p => {
+              const isSelected = selectedFolder === p.fullPath
+              return (
+                <button
+                  key={p.fullPath}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] cursor-pointer transition rounded-sm"
+                  style={{
+                    border: isSelected ? '1.5px solid var(--c-accent)' : '1px solid var(--c-border)',
+                    background: isSelected ? 'rgba(99,102,241,0.1)' : 'transparent',
+                    opacity: selectedFolder && !isSelected ? 0.4 : 1,
+                    color: 'var(--c-text)',
+                  }}
+                  title={p.fullPath}
+                  onClick={() => setSelectedFolder(isSelected ? null : p.fullPath)}
+                >
+                  <span style={{ color: 'var(--c-text2)' }}>{p.fullPath.split(/[/\\]/).filter(Boolean).pop()}</span>
+                  {p.count != null && <span className="font-bold" style={{ color: 'var(--c-white)' }}>{p.count}</span>}
+                </button>
+              )
+            })}
+          </div>
+        )}
+        {((selectedEditor && sel) || selectedFolder) && (
           <div className="mt-2 flex items-center gap-2">
-            <button onClick={() => navigate(`/sessions?editor=${selectedEditor}`)} className="flex items-center gap-1 text-[12px] px-2.5 py-1 transition" style={{ color: 'var(--c-accent)', border: '1px solid var(--c-border)' }}>
+            <button onClick={() => navigate(sessionsUrl)} className="flex items-center gap-1 text-[12px] px-2.5 py-1 transition" style={{ color: 'var(--c-accent)', border: '1px solid var(--c-border)' }}>
               Show Sessions <ArrowRight size={11} />
             </button>
-            <button onClick={() => setSelectedEditor(null)} className="flex items-center gap-1 text-[12px] px-2.5 py-1 transition" style={{ color: 'var(--c-text2)', border: '1px solid var(--c-border)' }}>
+            <button onClick={() => { setSelectedEditor(null); setSelectedFolder(null) }} className="flex items-center gap-1 text-[12px] px-2.5 py-1 transition" style={{ color: 'var(--c-text2)', border: '1px solid var(--c-border)' }}>
               <X size={9} /> Clear
             </button>
           </div>
@@ -230,7 +309,7 @@ export default function Dashboard({ overview }) {
 
       {/* KPIs — compact single row */}
       <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))' }}>
-        <KpiCard label="sessions" value={formatNumber(d.totalChats)} sub={sel ? editorLabel(sel.id) : `${allEditors.length} editors`} onClick={() => navigate(selectedEditor ? `/sessions?editor=${selectedEditor}` : '/sessions')} />
+        <KpiCard label="sessions" value={formatNumber(d.totalChats)} sub={sel ? editorLabel(sel.id) : `${allEditors.length} editors`} onClick={() => navigate(sessionsUrl)} />
         <KpiCard label="projects" value={d.topProjects.length} sub={`${daysSpan}d span`} onClick={() => navigate('/projects')} />
         <KpiCard label="this month" value={thisMonth ? thisMonth.count : 0} sub={thisMonth ? thisMonth.month : ''} onClick={() => navigate('/sessions')} />
         {stats && <>

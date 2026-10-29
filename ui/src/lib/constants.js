@@ -71,13 +71,23 @@ export function formatDate(ts) {
 }
 
 /**
+ * Format a Date as 'YYYY-MM-DD' in local time (toISOString() would use UTC).
+ */
+export function toLocalDateString(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * Convert { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' } date range to API ms timestamps.
  * Returns {} if range is null/incomplete.
  */
 export function dateRangeToApiParams(range) {
   if (!range?.from || !range?.to) return {};
   return {
-    dateFrom: new Date(range.from).getTime(),
+    dateFrom: new Date(range.from + 'T00:00:00').getTime(),
     dateTo: new Date(range.to + 'T23:59:59').getTime(),
   };
 }

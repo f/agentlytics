@@ -18,6 +18,7 @@
   --c-header: rgba(14,14,14,0.85);
   --c-code-bg: rgba(255,255,255,0.05); --c-pre-bg: rgba(0,0,0,0.4);
   --c-md-strong: #d0d0d0;
+  --c-accent: #6366f1;
 }
 
 .light {
@@ -28,6 +29,7 @@
   --c-header: rgba(245,245,245,0.9);
   --c-code-bg: rgba(0,0,0,0.05); --c-pre-bg: rgba(0,0,0,0.04);
   --c-md-strong: #111;
+  --c-accent: #6366f1;
 }
 
 body {

@@ -53,6 +53,7 @@ function appendDateParams(q, params) {
 export async function fetchOverview(params = {}) {
   const q = new URLSearchParams();
   if (params.editor) q.set('editor', params.editor);
+  if (params.folder) q.set('folder', params.folder);
   appendDateParams(q, params);
   const qs = q.toString();
   const res = await fetch(`${BASE}/api/overview${qs ? '?' + qs : ''}`);
@@ -87,6 +88,7 @@ export async function fetchProjects(params = {}) {
 export async function fetchDailyActivity(params = {}) {
   const q = new URLSearchParams();
   if (params.editor) q.set('editor', params.editor);
+  if (params.folder) q.set('folder', params.folder);
   appendDateParams(q, params);
   const qs = q.toString();
   const res = await fetch(`${BASE}/api/daily-activity${qs ? '?' + qs : ''}`);
@@ -121,6 +123,7 @@ export function refetchAgents(onProgress) {
 export async function fetchDashboardStats(params = {}) {
   const q = new URLSearchParams();
   if (params.editor) q.set('editor', params.editor);
+  if (params.folder) q.set('folder', params.folder);
   appendDateParams(q, params);
   const qs = q.toString();
   const res = await fetch(`${BASE}/api/dashboard-stats${qs ? '?' + qs : ''}`);

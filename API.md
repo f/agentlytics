@@ -8,6 +8,7 @@ Dashboard summary with KPIs, editor breakdown, mode distribution, monthly trend,
 
 **Query params:**
 - `editor` — filter by editor source ID (e.g. `cursor`, `devin`, `devin-next`)
+- `folder` — filter by project folder (absolute path)
 
 **Response:**
 
@@ -34,6 +35,7 @@ Daily session counts for the activity heatmap. Returns one entry per day.
 
 **Query params:**
 - `editor` — filter by editor source ID
+- `folder` — filter by project folder (absolute path)
 
 **Response:**
 
@@ -52,6 +54,7 @@ Detailed analytics: hourly distribution, weekday patterns, session depth, token 
 
 **Query params:**
 - `editor` — filter by editor source ID
+- `folder` — filter by project folder (absolute path)
 
 **Response:**
 

@@ -51,7 +51,7 @@ app.get('/api/mode', (req, res) => {
 
 app.get('/api/overview', (req, res) => {
   try {
-    const opts = { editor: req.query.editor || null, ...parseDateOpts(req.query), hiddenFolders: getHiddenFolders() };
+    const opts = { editor: req.query.editor || null, folder: req.query.folder || null, ...parseDateOpts(req.query), hiddenFolders: getHiddenFolders() };
     res.json(cache.getCachedOverview(opts));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -60,7 +60,7 @@ app.get('/api/overview', (req, res) => {
 
 app.get('/api/daily-activity', (req, res) => {
   try {
-    const opts = { editor: req.query.editor || null, ...parseDateOpts(req.query), hiddenFolders: getHiddenFolders() };
+    const opts = { editor: req.query.editor || null, folder: req.query.folder || null, ...parseDateOpts(req.query), hiddenFolders: getHiddenFolders() };
     res.json(cache.getCachedDailyActivity(opts));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -181,7 +181,7 @@ app.get('/api/deep-analytics', (req, res) => {
 
 app.get('/api/dashboard-stats', (req, res) => {
   try {
-    const opts = { editor: req.query.editor || null, ...parseDateOpts(req.query), hiddenFolders: getHiddenFolders() };
+    const opts = { editor: req.query.editor || null, folder: req.query.folder || null, ...parseDateOpts(req.query), hiddenFolders: getHiddenFolders() };
     res.json(cache.getCachedDashboardStats(opts));
   } catch (err) {
     res.status(500).json({ error: err.message });

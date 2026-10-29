@@ -560,6 +560,7 @@ function getCachedDailyActivity(opts = {}) {
   const hf = hiddenFolderFilter(opts);
   if (hf.sql) { conditions.push(hf.sql.replace(' AND ', '')); params.push(...hf.params); }
   if (opts.editor) { conditions.push('source = ?'); params.push(opts.editor); }
+  if (opts.folder) { conditions.push('folder = ?'); params.push(opts.folder); }
   if (opts.dateFrom) { conditions.push('COALESCE(last_updated_at, created_at) >= ?'); params.push(opts.dateFrom); }
   if (opts.dateTo) { conditions.push('COALESCE(last_updated_at, created_at) <= ?'); params.push(opts.dateTo); }
   const whereAnd = conditions.length > 0 ? ' AND ' + conditions.join(' AND ') : '';
