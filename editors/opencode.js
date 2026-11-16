@@ -68,6 +68,152 @@ function extractTokenInfo(data) {
   };
 }
 
+// ============================================================
+// OpenCode v2+ storage (session_v2 / session_message tables)
+// ============================================================
+
+function hasSqliteV2Schema() {
+  if (!fs.existsSync(DB_PATH)) return false;
+  try {
+    const db = new Database(DB_PATH, { readonly: true });
+    const tables = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table'"
+    ).all().map(r => r.name);
+    db.close();
+    return tables.includes('session_v2') && tables.includes('session_message');
+  } catch {
+    return false;
+  }
+}
+
+function parseModelRef(model) {
+  if (!model || typeof model !== 'object') return { modelValue: null, providerValue: null };
+  const id = typeof model.id === 'string' ? model.id
+    : typeof model.modelID === 'string' ? model.modelID
+    : null;
+  const provider = typeof model.providerID === 'string' ? model.providerID : null;
+  return { modelValue: id, providerValue: provider };
+}
+
+function getSqliteV2Sessions() {
+  if (!hasSqliteV2Schema()) return [];
+  return queryDb(
+    `SELECT s.id, s.title, s.directory, s.agent, s.model,
+            s.time_created, s.time_updated,
+            p.worktree,
+            (SELECT count(*) FROM session_message m
+             WHERE m.session_id = s.id AND m.type IN ('user','assistant')) as msg_count
+     FROM session_v2 s LEFT JOIN project p ON s.project_id = p.id
+     ORDER BY s.time_updated DESC`
+  );
+}
+
+// Normalize tool part state into the legacy text preview shape
+function v2ToolPreview(state) {
+  if (!state || typeof state !== 'object') return '';
+  const content = state.content;
+  if (Array.isArray(content)) {
+    return content
+      .filter(c => c && typeof c === 'object' && typeof c.text === 'string')
+      .map(c => c.text)
+      .join('\n');
+  }
+  if (typeof state.output === 'string') return state.output;
+  if (typeof state.text === 'string') return state.text;
+  return '';
+}
+
+function v2ArgSummary(part) {
+  const input = part?.state?.input ?? part?.input ?? part?.args ?? null;
+  if (input == null) return '';
+  if (typeof input === 'string') return input;
+  if (typeof input === 'object') return Object.keys(input).join(', ');
+  return String(input);
+}
+
+function getSqliteV2Messages(sessionId) {
+  if (!hasSqliteV2Schema()) return [];
+  let db;
+  try {
+    db = new Database(DB_PATH, { readonly: true });
+  } catch {
+    return [];
+  }
+  try {
+    const rows = db.prepare(
+      `SELECT id, type, seq, data, time_created
+       FROM session_message
+       WHERE session_id = ? AND type IN ('user','assistant')
+       ORDER BY time_created ASC, seq ASC`
+    ).all(sessionId);
+
+    const result = [];
+    for (const row of rows) {
+      let data;
+      try { data = JSON.parse(row.data); } catch { continue; }
+
+      const contentParts = [];
+
+      if (row.type === 'user') {
+        const text = typeof data.text === 'string' && data.text
+          ? data.text
+          : (data.metadata && typeof data.metadata.displayText === 'string' ? data.metadata.displayText : '');
+        if (text) contentParts.push(text);
+      } else {
+        const content = Array.isArray(data.content) ? data.content : [];
+        for (const part of content) {
+          if (!part || typeof part !== 'object') continue;
+          const type = part.type;
+          if (type === 'text' && typeof part.text === 'string') {
+            contentParts.push(part.text);
+          } else if (type === 'reasoning' && typeof part.text === 'string') {
+            if (part.text) contentParts.push(`[thinking] ${part.text}`);
+          } else if (type === 'tool') {
+            const toolName = part.name || part.toolName || 'tool';
+            contentParts.push(`[tool-call: ${toolName}(${v2ArgSummary(part)})]`);
+            const preview = v2ToolPreview(part.state);
+            if (preview) contentParts.push(`[tool-result] ${preview.substring(0, 500)}`);
+          }
+        }
+      }
+
+      const content = contentParts.join('\n');
+      if (!content) continue;
+
+      let modelValue = null;
+      let providerValue = null;
+      let tokenInfo = { inputTokens: null, outputTokens: null, cacheRead: null, cacheWrite: null };
+
+      if (row.type === 'user') {
+        const parsed = parseModelRef(data.metadata?.model);
+        modelValue = parsed.modelValue;
+        providerValue = parsed.providerValue;
+      } else {
+        const parsed = parseModelRef(data.model);
+        modelValue = parsed.modelValue;
+        providerValue = parsed.providerValue;
+        tokenInfo = extractTokenInfo(data);
+      }
+
+      result.push({
+        role: row.type === 'user' ? 'user' : 'assistant',
+        content,
+        _model: modelValue,
+        _provider: providerValue,
+        _inputTokens: tokenInfo.inputTokens,
+        _outputTokens: tokenInfo.outputTokens,
+        _cacheRead: tokenInfo.cacheRead,
+        _cacheWrite: tokenInfo.cacheWrite,
+      });
+    }
+    return result;
+  } catch {
+    return [];
+  } finally {
+    try { db.close(); } catch {}
+  }
+}
+
 function getSqliteSessions() {
   return queryDb(
     `SELECT s.id, s.title, s.directory, s.time_created, s.time_updated,
@@ -303,7 +449,31 @@ function getChats() {
     });
   }
 
-  // 2. SQLite sessions (older/primary store) — add any not already found in files
+  // 2. OpenCode v2+ SQLite sessions — add any not already found
+  const v2Sessions = getSqliteV2Sessions();
+  for (const row of v2Sessions) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    let modelInfo = null;
+    try { modelInfo = row.model ? JSON.parse(row.model) : null; } catch { modelInfo = null; }
+    chats.push({
+      source: 'opencode',
+      composerId: row.id,
+      name: cleanTitle(row.title),
+      createdAt: row.time_created || null,
+      lastUpdatedAt: row.time_updated || null,
+      mode: 'opencode',
+      folder: row.worktree || row.directory || null,
+      encrypted: false,
+      bubbleCount: row.msg_count || 0,
+      _agent: row.agent || null,
+      _model: modelInfo?.id || null,
+      _provider: modelInfo?.providerID || null,
+      _storageType: 'sqlite-v2',
+    });
+  }
+
+  // 3. Legacy SQLite sessions (older/primary store) — add any not already found in files
   const dbSessions = getSqliteSessions();
   for (const row of dbSessions) {
     if (seen.has(row.id)) continue;
@@ -332,9 +502,11 @@ function cleanTitle(title) {
 }
 
 function getMessages(chat) {
-  // Prefer file-based messages; fall back to SQLite
+  // Prefer file-based messages; then OpenCode v2+ SQLite; then legacy SQLite
   const fileMessages = getMessagesForSession(chat.composerId);
   if (fileMessages.length > 0) return fileMessages;
+  const v2Messages = getSqliteV2Messages(chat.composerId);
+  if (v2Messages.length > 0) return v2Messages;
   return getSqliteMessages(chat.composerId);
 }
 
