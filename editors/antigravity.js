@@ -558,10 +558,12 @@ function findLanguageServer() {
     : process.platform === 'darwin'
       ? 'language_server_macos'
       : 'language_server_linux';
+  // Newer Antigravity releases ship a single cross-platform binary name
+  const serverProcessNames = ['language_server.bin', serverProcessName];
 
   for (const proc of getProcessList()) {
     const { commandLine, pid } = proc;
-    if (!commandLine.includes(serverProcessName)) continue;
+    if (!serverProcessNames.some(n => commandLine.includes(n))) continue;
 
     const appDirMatch = commandLine.match(/--app_data_dir\s+(\S+)/);
     if (!appDirMatch || !appDirMatch[1].includes('antigravity')) continue;

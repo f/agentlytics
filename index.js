@@ -271,7 +271,8 @@ const DEVIN_DESKTOP_VARIANTS = [
   try {
     const ps = execSync('ps aux', { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
     for (const line of ps.split('\n')) {
-      if (!line.includes('language_server_macos')) continue;
+      // Newer Antigravity releases ship a generic binary name instead of language_server_macos
+      if (!line.includes('language_server_macos') && !line.includes('language_server.bin')) continue;
       const ideMatch = line.match(/--ide_name\s+(\S+)/);
       const appDirMatch = line.match(/--app_data_dir\s+(\S+)/);
       if (ideMatch) runningIdes.push(ideMatch[1]);
